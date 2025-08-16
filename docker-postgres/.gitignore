@@ -1,0 +1,26 @@
+# Docker
+.env
+.env.local
+.env.*.local
+docker-compose.override.yml
+
+# PostgreSQL data y volúmenes
+pgdata/
+postgres-data/
+db-data/
+postgresql/
+data/
+
+# Logs
+logs/
+*.log
+
+# Database files
+*.sql
+*.dump
+*.backup
+
+# OS generated files
+.DS_Store
+Thumbs.db
+!VestimentaCatan16_8.sql

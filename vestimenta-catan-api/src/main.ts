@@ -6,7 +6,8 @@ import { AppModule } from './app.module';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  // Configuración global de validación
+  const apiPrefix = process.env.API_PREFIX || 'api';
+
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
@@ -15,14 +16,14 @@ async function bootstrap() {
     }),
   );
 
-  // Configuración de CORS
   app.enableCors({
     origin: process.env.CORS_ORIGIN?.split(',') || ['http://localhost:3000'],
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
     credentials: true,
   });
 
-  // Configuración de Swagger
+  app.setGlobalPrefix(apiPrefix);
+
   const config = new DocumentBuilder()
     .setTitle('Vestimenta Catán API')
     .setDescription(
@@ -41,7 +42,7 @@ async function bootstrap() {
     .build();
 
   const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('api/docs', app, document, {
+  SwaggerModule.setup(`${apiPrefix}/docs`, app, document, {
     swaggerOptions: {
       persistAuthorization: true,
       tagsSorter: 'alpha',
@@ -54,7 +55,9 @@ async function bootstrap() {
   await app.listen(port);
 
   console.log(`🚀 Aplicación corriendo en: http://localhost:${port}`);
-  console.log(`📚 Documentación Swagger: http://localhost:${port}/api/docs`);
+  console.log(
+    `📚 Documentación Swagger: http://localhost:${port}/${apiPrefix}/docs`,
+  );
 }
 
 bootstrap().catch((error) => {

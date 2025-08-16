@@ -1,0 +1,82 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model colores {
+  id                 BigInt               @id @default(autoincrement())
+  nombre             String               @unique
+  created_at         DateTime             @default(now()) @db.Timestamptz(6)
+  updated_at         DateTime             @default(now()) @db.Timestamptz(6)
+  producto_variantes producto_variantes[]
+  reservas           reservas[]
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model producto_variantes {
+  id          BigInt    @id @default(autoincrement())
+  producto_id Int
+  talle_id    BigInt?
+  color_id    BigInt
+  cantidad    Int       @default(0)
+  created_at  DateTime  @default(now()) @db.Timestamptz(6)
+  updated_at  DateTime  @default(now()) @db.Timestamptz(6)
+  colores     colores   @relation(fields: [color_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_pv_color")
+  productos   productos @relation(fields: [producto_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_pv_producto")
+  talles      talles?   @relation(fields: [talle_id], references: [id], onUpdate: NoAction, map: "fk_pv_talle")
+
+  @@unique([producto_id, talle_id, color_id], map: "ux_prod_talle_color")
+  @@index([color_id], map: "ix_var_color")
+  @@index([producto_id, talle_id, color_id], map: "ix_var_combo")
+  @@index([producto_id], map: "ix_var_prod")
+  @@index([talle_id], map: "ix_var_talle")
+}
+
+model productos {
+  id                 Int                  @id
+  nombre             String
+  descripcion        String?
+  genero             Genero
+  thumbnail          String?
+  created_at         DateTime             @default(now()) @db.Timestamptz(6)
+  updated_at         DateTime             @default(now()) @db.Timestamptz(6)
+  producto_variantes producto_variantes[]
+  reservas           reservas[]
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model reservas {
+  id            BigInt    @id @default(autoincrement())
+  producto_id   Int
+  talle_id      BigInt?
+  color_id      BigInt
+  cantidad      Int
+  estado        String
+  fecha_reserva DateTime  @default(now()) @db.Timestamptz(6)
+  created_at    DateTime  @default(now()) @db.Timestamptz(6)
+  updated_at    DateTime  @default(now()) @db.Timestamptz(6)
+  colores       colores   @relation(fields: [color_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  productos     productos @relation(fields: [producto_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  talles        talles?   @relation(fields: [talle_id], references: [id], onUpdate: NoAction)
+}
+
+model talles {
+  id                 BigInt               @id @default(autoincrement())
+  nombre_talle       String               @unique(map: "talles_label_key")
+  created_at         DateTime             @default(now()) @db.Timestamptz(6)
+  updated_at         DateTime             @default(now()) @db.Timestamptz(6)
+  producto_variantes producto_variantes[]
+  reservas           reservas[]
+}
+
+enum Genero {
+  mujer
+  hombre
+  ni_os_unisex @map("niños unisex")
+
+  @@map("genero")
+}

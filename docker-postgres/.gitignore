@@ -24,3 +24,4 @@ logs/
 .DS_Store
 Thumbs.db
 !VestimentaCatan16_8.sql
+!backup_final_soft_delete_complete.sql

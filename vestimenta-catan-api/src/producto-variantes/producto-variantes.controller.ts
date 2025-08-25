@@ -40,8 +40,57 @@ export class ProductoVariantesController {
   }
 
   @Get()
-  @ApiOperation({ summary: 'Obtener todas las variantes de productos' })
-  @ApiResponse({ status: 200, description: 'Lista de variantes de productos.' })
+  @ApiOperation({
+    summary: 'Obtener todas las variantes de productos (Stock detallado)',
+    description:
+      'Retorna las 63 variantes de productos con stock específico por talle y color. Cada variante representa una combinación única de producto + talle + color con su cantidad disponible. AQUÍ están las 233 unidades individuales que conforman el inventario total.',
+  })
+  @ApiResponse({
+    status: 200,
+    description:
+      'Lista completa de variantes con stock detallado. Total: 63 variantes con 233 unidades.',
+    schema: {
+      type: 'array',
+      example: [
+        {
+          id: 1,
+          producto_id: 1,
+          talle_id: 5,
+          color_id: 1,
+          cantidad: 8,
+          producto: {
+            nombre: 'remera térmica',
+            genero: 'mujer',
+          },
+          talle: {
+            nombre_talle: 'S',
+          },
+          color: {
+            nombre: 'Blanco',
+            codigo_hex: '#FFFFFF',
+          },
+        },
+        {
+          id: 2,
+          producto_id: 1,
+          talle_id: 6,
+          color_id: 1,
+          cantidad: 12,
+          producto: {
+            nombre: 'remera térmica',
+            genero: 'mujer',
+          },
+          talle: {
+            nombre_talle: 'M',
+          },
+          color: {
+            nombre: 'Blanco',
+            codigo_hex: '#FFFFFF',
+          },
+        },
+      ],
+    },
+  })
   findAll() {
     return this.productoVariantesService.findAll();
   }

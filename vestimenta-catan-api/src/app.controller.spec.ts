@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
+import { Response } from 'express';
 
 describe('AppController', () => {
   let appController: AppController;
@@ -15,8 +16,14 @@ describe('AppController', () => {
   });
 
   describe('root', () => {
-    it('should return "Hello World!"', () => {
-      expect(appController.getHello()).toBe('Hello World!');
+    it('should redirect to /api', () => {
+      const redirectMock = jest.fn();
+      const mockResponse = {
+        redirect: redirectMock,
+      } as unknown as Response;
+
+      appController.redirectToSwagger(mockResponse);
+      expect(redirectMock).toHaveBeenCalledWith('/api');
     });
   });
 });

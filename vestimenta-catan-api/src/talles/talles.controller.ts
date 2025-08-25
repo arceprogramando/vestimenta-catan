@@ -26,10 +26,67 @@ export class TallesController {
   constructor(private readonly tallesService: TallesService) {}
 
   @Post()
-  @ApiOperation({ summary: 'Crear un nuevo talle' })
-  @ApiBody({ type: CreateTalleDto })
-  @ApiResponse({ status: 201, description: 'Talle creado exitosamente.' })
-  @ApiResponse({ status: 400, description: 'Datos inválidos.' })
+  @ApiOperation({
+    summary: 'Crear un nuevo talle para productos',
+    description:
+      'Registra un nuevo talle disponible para las variantes de productos de vestimenta. Los talles permiten categorizar productos por tamaño. Soporta diferentes sistemas de tallaje: letras (XS, S, M, L, XL), números (36, 38, 40) o medidas específicas.',
+  })
+  @ApiBody({
+    type: CreateTalleDto,
+    description: 'Información del talle a registrar',
+    examples: {
+      talleLetra: {
+        summary: 'Talle con letras',
+        value: {
+          nombre_talle: 'M',
+          descripcion: 'Mediano - Pecho: 96-101cm, Cintura: 81-86cm',
+          categoria_talle: 'letras',
+        },
+      },
+      talleNumero: {
+        summary: 'Talle numérico',
+        value: {
+          nombre_talle: '40',
+          descripcion: 'Talle 40 - Corresponde a L en letras',
+          categoria_talle: 'numeros',
+        },
+      },
+      talleInfantil: {
+        summary: 'Talle infantil',
+        value: {
+          nombre_talle: '8 años',
+          descripcion: 'Para niños de 8 años - Altura: 125-130cm',
+          categoria_talle: 'infantil',
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 201,
+    description:
+      'Talle creado exitosamente y disponible para usar en variantes de productos.',
+    schema: {
+      example: {
+        id: 1,
+        nombre_talle: 'M',
+        descripcion: 'Mediano - Pecho: 96-101cm, Cintura: 81-86cm',
+        categoria_talle: 'letras',
+        creado_en: '2025-08-24T10:30:00.000Z',
+        actualizado_en: '2025-08-24T10:30:00.000Z',
+      },
+    },
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Datos inválidos o talle duplicado.',
+    schema: {
+      example: {
+        message: ['El talle "M" ya existe en el sistema'],
+        error: 'Bad Request',
+        statusCode: 400,
+      },
+    },
+  })
   create(@Body() createTalleDto: CreateTalleDto) {
     return this.tallesService.create(createTalleDto);
   }

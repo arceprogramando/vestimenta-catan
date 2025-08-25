@@ -1,5 +1,5 @@
 import { NestFactory } from '@nestjs/core';
-import { ValidationPipe } from '@nestjs/common';
+import { ValidationPipe, RequestMethod } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 
@@ -22,23 +22,46 @@ async function bootstrap() {
     credentials: true,
   });
 
-  app.setGlobalPrefix(apiPrefix);
+  // Configurar prefijo global para todos los controladores excepto rutas específicas
+  app.setGlobalPrefix(apiPrefix, {
+    exclude: [
+      { path: '', method: RequestMethod.GET },
+      { path: 'api', method: RequestMethod.GET },
+      { path: 'api/health', method: RequestMethod.GET },
+    ],
+  });
 
   const config = new DocumentBuilder()
-    .setTitle('Vestimenta Catán API')
+    .setTitle('Vestimenta Catán API - Sistema de Inventario')
     .setDescription(
-      'API para gestión de inventario de vestimenta - Sistema Catán',
+      'API completa para gestión de inventario de vestimenta térmica. ' +
+        '\n\n🔧 **Funcionalidades principales:**' +
+        '\n• Gestión de productos base' +
+        '\n• Control de variantes por talle y color' +
+        '\n• Administración de stock en tiempo real' +
+        '\n• Gestión de colores y talles disponibles' +
+        '\n• Sistema de reservas' +
+        '\n\n📚 **Endpoints disponibles:**' +
+        '\n• `/api/productos` - CRUD de productos principales' +
+        '\n• `/api/productos/stock-resumen` - Resumen de inventario' +
+        '\n• `/api/producto-variantes` - CRUD de variantes de productos' +
+        '\n• `/api/colores` - CRUD de colores disponibles' +
+        '\n• `/api/talles` - CRUD de talles disponibles' +
+        '\n• `/api/reservas` - CRUD de reservas de productos',
     )
     .setVersion('1.0')
-    .addTag('colores', 'Gestión de colores disponibles')
-    .addTag('talles', 'Gestión de talles (S, M, L, XL, etc.)')
-    .addTag('productos', 'Gestión de productos (camisetas, pantalones, etc.)')
+    .addTag(
+      'productos',
+      '🛍️ Productos - Gestión de productos principales del catálogo',
+    )
     .addTag(
       'producto-variantes',
-      'Variantes de productos con stock por talle y color',
+      '📏 Variantes - Control detallado de stock por talle y color',
     )
-    .addTag('reservas', 'Gestión de reservas de productos')
-    .addServer('http://localhost:3000', 'Servidor de desarrollo')
+    .addTag('colores', '🎨 Colores - Administración de paleta de colores')
+    .addTag('talles', '📐 Talles - Gestión de talles disponibles')
+    .addTag('reservas', '📋 Reservas - Sistema de reservas de productos')
+    .addServer('http://localhost:3000', 'Servidor de desarrollo local')
     .build();
 
   const document = SwaggerModule.createDocument(app, config);

@@ -40,18 +40,18 @@ model producto_variantes {
   talles        talles?   @relation(fields: [talle_id], references: [id], onUpdate: NoAction, map: "fk_pv_talle")
 
   @@unique([producto_id, talle_id, color_id], map: "ux_prod_talle_color")
+  @@index([is_active], map: "ix_var_active")
   @@index([color_id], map: "ix_var_color")
   @@index([producto_id, talle_id, color_id], map: "ix_var_combo")
   @@index([producto_id], map: "ix_var_prod")
   @@index([talle_id], map: "ix_var_talle")
-  @@index([is_active], map: "ix_var_active")
 }
 
 model productos {
   id                 Int                  @id
   nombre             String
   descripcion        String?
-  genero             Genero
+  genero             genero
   thumbnail          String?
   created_at         DateTime             @default(now()) @db.Timestamptz(6)
   updated_at         DateTime             @default(now()) @db.Timestamptz(6)
@@ -103,10 +103,8 @@ model talles {
   @@index([is_active], map: "ix_talles_active")
 }
 
-enum Genero {
+enum genero {
   mujer
   hombre
   ni_os_unisex @map("niños unisex")
-
-  @@map("genero")
 }

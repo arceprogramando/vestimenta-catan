@@ -124,6 +124,13 @@ Work systematically toward a complete, robust, and well-tested solution. If comp
 - **No automatic pushes**: Never push changes to remote repositories automatically.
 - **Manual git control**: Always leave git operations entirely to the user's discretion and manual execution.
 
+### File Management Policy
+
+- **Never create duplicate code files**: Always edit the original files directly, never create `_new`, `_temp`, `_backup`, `_old` versions of existing code files.
+- **When replace_string_in_file fails**: Use `read_file` to get complete content, then replace the entire file content instead of creating alternative files.
+- **One source of truth**: Each code functionality should have only one file - avoid file proliferation.
+- **Immediate cleanup**: If a duplicate file was accidentally created, delete it immediately after copying its content to the original.
+
 ### Temporary Scripts Handling
 
 - If generating temporary scripts (e.g., `crearUsuarioPrueba.js`, `testImport.js`, etc.), they must be treated as disposable.

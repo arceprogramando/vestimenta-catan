@@ -20,12 +20,14 @@ export default function Home() {
     const fetchProductos = async () => {
       try {
         setLoading(true);
-        const response = await fetch('http://localhost:3000/api/productos/stock-resumen');
-        
+        const response = await fetch(
+          'http://localhost:3000/api/productos/stock-resumen'
+        );
+
         if (!response.ok) {
           throw new Error(`Error: ${response.status} ${response.statusText}`);
         }
-        
+
         const data = await response.json();
         setProductos(data);
       } catch (err) {
@@ -67,7 +69,7 @@ export default function Home() {
         <h1 className="text-3xl font-bold text-gray-900 mb-8">
           Vestimenta Catán - Stock Resumen
         </h1>
-        
+
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {productos.map((producto) => (
             <div
@@ -80,25 +82,23 @@ export default function Home() {
                   alt={producto.nombre}
                   className="w-full h-48 object-cover"
                   onError={(e) => {
-                    e.currentTarget.src = '/placeholder-image.jpg';
+                    e.currentTarget.src = '/remera-termica-hombre-1.jpeg';
                   }}
                 />
               </div>
-              
+
               <div className="p-6">
                 <h3 className="text-lg font-semibold text-gray-900 mb-2">
                   {producto.nombre}
                 </h3>
-                
-                <p className="text-gray-600 mb-2">
-                  {producto.descripcion}
-                </p>
-                
+
+                <p className="text-gray-600 mb-2">{producto.descripcion}</p>
+
                 <div className="flex justify-between items-center">
                   <span className="inline-block bg-blue-100 text-blue-800 text-sm px-2 py-1 rounded">
                     {producto.genero}
                   </span>
-                  
+
                   <span className="text-lg font-bold text-green-600">
                     Stock: {producto.stock_total}
                   </span>
@@ -107,7 +107,7 @@ export default function Home() {
             </div>
           ))}
         </div>
-        
+
         {productos.length === 0 && (
           <div className="text-center text-gray-500 mt-8">
             No hay productos disponibles

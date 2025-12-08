@@ -1,12 +1,16 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe, RequestMethod } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import cookieParser from 'cookie-parser';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
   const apiPrefix = process.env.API_PREFIX || 'api';
+
+  // Middleware para parsear cookies
+  app.use(cookieParser());
 
   app.useGlobalPipes(
     new ValidationPipe({
@@ -41,15 +45,35 @@ async function bootstrap() {
         '\n• Administración de stock en tiempo real' +
         '\n• Gestión de colores y talles disponibles' +
         '\n• Sistema de reservas' +
+        '\n• Autenticación JWT con access y refresh tokens' +
+        '\n\n🔐 **Autenticación:**' +
+        '\n• POST `/api/auth/register` - Registrar usuario' +
+        '\n• POST `/api/auth/login` - Iniciar sesión (retorna access token)' +
+        '\n• POST `/api/auth/refresh` - Refrescar tokens' +
+        '\n• POST `/api/auth/logout` - Cerrar sesión' +
         '\n\n📚 **Endpoints disponibles:**' +
         '\n• `/api/productos` - CRUD de productos principales' +
         '\n• `/api/productos/stock-resumen` - Resumen de inventario' +
         '\n• `/api/producto-variantes` - CRUD de variantes de productos' +
         '\n• `/api/colores` - CRUD de colores disponibles' +
         '\n• `/api/talles` - CRUD de talles disponibles' +
-        '\n• `/api/reservas` - CRUD de reservas de productos',
+        '\n• `/api/reservas` - CRUD de reservas de productos' +
+        '\n• `/api/usuarios` - Gestión de usuarios (admin)',
     )
     .setVersion('1.0')
+    .addBearerAuth(
+      {
+        type: 'http',
+        scheme: 'bearer',
+        bearerFormat: 'JWT',
+        name: 'Authorization',
+        description: 'Ingresa tu access token JWT',
+        in: 'header',
+      },
+      'access-token',
+    )
+    .addTag('Autenticación', '🔐 Auth - Registro, login y gestión de sesiones')
+    .addTag('Usuarios', '👤 Usuarios - Gestión de usuarios del sistema')
     .addTag(
       'productos',
       '🛍️ Productos - Gestión de productos principales del catálogo',

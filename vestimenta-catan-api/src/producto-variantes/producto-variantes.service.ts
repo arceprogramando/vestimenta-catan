@@ -1,7 +1,13 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateProductoVarianteDto } from './dto/create-producto-variante.dto';
 import { UpdateProductoVarianteDto } from './dto/update-producto-variante.dto';
+
+// DTO para eliminación lógica
+export interface SoftDeleteDto {
+  deleted_by?: string;
+  delete_reason?: string;
+}
 
 @Injectable()
 export class ProductoVariantesService {
@@ -10,114 +16,148 @@ export class ProductoVariantesService {
   async create(createProductoVarianteDto: CreateProductoVarianteDto) {
     const variante = await this.prisma.producto_variantes.create({
       data: {
-        ...createProductoVarianteDto,
+        producto_id: createProductoVarianteDto.producto_id,
         talle_id: createProductoVarianteDto.talle_id
           ? BigInt(createProductoVarianteDto.talle_id)
           : null,
         color_id: BigInt(createProductoVarianteDto.color_id),
+        cantidad: createProductoVarianteDto.cantidad || 0,
       },
       include: {
-        productos: true,
-        colores: true,
-        talles: true,
+        producto: true,
+        color: true,
+        talle: true,
       },
     });
 
-    return {
-      ...variante,
-      id: Number(variante.id),
-      color_id: Number(variante.color_id),
-      talle_id: variante.talle_id ? Number(variante.talle_id) : null,
-      colores: { ...variante.colores, id: Number(variante.colores.id) },
-      talles: variante.talles
-        ? { ...variante.talles, id: Number(variante.talles.id) }
-        : null,
-    };
+    return this.serializeVariante(variante);
   }
 
-  async findAll() {
+  async findAll(includeDeleted = false) {
     const variantes = await this.prisma.producto_variantes.findMany({
+      where: includeDeleted ? undefined : { is_active: true },
       include: {
-        productos: true,
-        colores: true,
-        talles: true,
+        producto: true,
+        color: true,
+        talle: true,
       },
       orderBy: { created_at: 'desc' },
     });
 
-    return variantes.map((variante) => ({
-      ...variante,
-      id: Number(variante.id),
-      color_id: Number(variante.color_id),
-      talle_id: variante.talle_id ? Number(variante.talle_id) : null,
-      colores: { ...variante.colores, id: Number(variante.colores.id) },
-      talles: variante.talles
-        ? { ...variante.talles, id: Number(variante.talles.id) }
-        : null,
-    }));
+    return variantes.map(variante => this.serializeVariante(variante));
   }
 
-  async findOne(id: number) {
-    const variante = await this.prisma.producto_variantes.findUnique({
-      where: { id: BigInt(id) },
+  async findByProducto(productoId: number) {
+    const variantes = await this.prisma.producto_variantes.findMany({
+      where: {
+        producto_id: productoId,
+        is_active: true,
+      },
       include: {
-        productos: true,
-        colores: true,
-        talles: true,
+        color: true,
+        talle: true,
+      },
+      orderBy: [
+        { talle: { orden: 'asc' } },
+        { color: { nombre: 'asc' } },
+      ],
+    });
+
+    return variantes.map(variante => this.serializeVariante(variante));
+  }
+
+  async findOne(id: number, includeDeleted = false) {
+    const variante = await this.prisma.producto_variantes.findUnique({
+      where: {
+        id: BigInt(id),
+        ...(includeDeleted ? {} : { is_active: true }),
+      },
+      include: {
+        producto: true,
+        color: true,
+        talle: true,
       },
     });
 
     if (!variante) return null;
 
-    return {
-      ...variante,
-      id: Number(variante.id),
-      color_id: Number(variante.color_id),
-      talle_id: variante.talle_id ? Number(variante.talle_id) : null,
-      colores: { ...variante.colores, id: Number(variante.colores.id) },
-      talles: variante.talles
-        ? { ...variante.talles, id: Number(variante.talles.id) }
-        : null,
-    };
+    return this.serializeVariante(variante);
   }
 
-  async update(
-    id: number,
-    updateProductoVarianteDto: UpdateProductoVarianteDto,
-  ) {
+  async update(id: number, updateProductoVarianteDto: UpdateProductoVarianteDto) {
+    const existing = await this.findOne(id);
+    if (!existing) {
+      throw new NotFoundException('Variante no encontrada o fue eliminada');
+    }
+
     const variante = await this.prisma.producto_variantes.update({
       where: { id: BigInt(id) },
       data: {
-        ...updateProductoVarianteDto,
-        talle_id: updateProductoVarianteDto.talle_id
-          ? BigInt(updateProductoVarianteDto.talle_id)
-          : undefined,
-        color_id: updateProductoVarianteDto.color_id
-          ? BigInt(updateProductoVarianteDto.color_id)
-          : undefined,
+        ...(updateProductoVarianteDto.producto_id && {
+          producto_id: updateProductoVarianteDto.producto_id
+        }),
+        ...(updateProductoVarianteDto.talle_id !== undefined && {
+          talle_id: updateProductoVarianteDto.talle_id
+            ? BigInt(updateProductoVarianteDto.talle_id)
+            : null
+        }),
+        ...(updateProductoVarianteDto.color_id && {
+          color_id: BigInt(updateProductoVarianteDto.color_id)
+        }),
+        ...(updateProductoVarianteDto.cantidad !== undefined && {
+          cantidad: updateProductoVarianteDto.cantidad
+        }),
+        updated_at: new Date(),
       },
       include: {
-        productos: true,
-        colores: true,
-        talles: true,
+        producto: true,
+        color: true,
+        talle: true,
+      },
+    });
+
+    return this.serializeVariante(variante);
+  }
+
+  // Actualizar stock
+  async updateStock(id: number, cantidad: number) {
+    const existing = await this.findOne(id);
+    if (!existing) {
+      throw new NotFoundException('Variante no encontrada o fue eliminada');
+    }
+
+    const variante = await this.prisma.producto_variantes.update({
+      where: { id: BigInt(id) },
+      data: {
+        cantidad,
+        updated_at: new Date(),
       },
     });
 
     return {
       ...variante,
       id: Number(variante.id),
-      color_id: Number(variante.color_id),
       talle_id: variante.talle_id ? Number(variante.talle_id) : null,
-      colores: { ...variante.colores, id: Number(variante.colores.id) },
-      talles: variante.talles
-        ? { ...variante.talles, id: Number(variante.talles.id) }
-        : null,
+      color_id: Number(variante.color_id),
     };
   }
 
-  async remove(id: number) {
-    const variante = await this.prisma.producto_variantes.delete({
+  // Eliminación lógica
+  async remove(id: number, softDeleteDto?: SoftDeleteDto) {
+    const existing = await this.findOne(id);
+    if (!existing) {
+      throw new NotFoundException('Variante no encontrada o ya fue eliminada');
+    }
+
+    const variante = await this.prisma.producto_variantes.update({
       where: { id: BigInt(id) },
+      data: {
+        is_active: false,
+        deleted_at: new Date(),
+        deleted_by: softDeleteDto?.deleted_by,
+        delete_reason: softDeleteDto?.delete_reason,
+        updated_at: new Date(),
+      },
     });
 
     return {
@@ -125,6 +165,63 @@ export class ProductoVariantesService {
       id: Number(variante.id),
       color_id: Number(variante.color_id),
       talle_id: variante.talle_id ? Number(variante.talle_id) : null,
+    };
+  }
+
+  // Restaurar variante eliminada
+  async restore(id: number) {
+    const variante = await this.prisma.producto_variantes.findUnique({
+      where: { id: BigInt(id) },
+    });
+
+    if (!variante) {
+      throw new NotFoundException('Variante no encontrada');
+    }
+
+    if (variante.is_active) {
+      throw new BadRequestException('La variante no está eliminada');
+    }
+
+    const restored = await this.prisma.producto_variantes.update({
+      where: { id: BigInt(id) },
+      data: {
+        is_active: true,
+        deleted_at: null,
+        deleted_by: null,
+        delete_reason: null,
+        updated_at: new Date(),
+      },
+      include: {
+        producto: true,
+        color: true,
+        talle: true,
+      },
+    });
+
+    return this.serializeVariante(restored);
+  }
+
+  // Helper para serializar BigInt a Number
+  private serializeVariante(variante: any) {
+    return {
+      id: Number(variante.id),
+      producto_id: variante.producto_id,
+      color_id: Number(variante.color_id),
+      talle_id: variante.talle_id ? Number(variante.talle_id) : null,
+      cantidad: variante.cantidad,
+      is_active: variante.is_active,
+      created_at: variante.created_at,
+      updated_at: variante.updated_at,
+      producto: variante.producto || null,
+      color: variante.color ? {
+        id: Number(variante.color.id),
+        nombre: variante.color.nombre,
+      } : null,
+      talle: variante.talle ? {
+        id: Number(variante.talle.id),
+        nombre: variante.talle.nombre,
+        orden: variante.talle.orden,
+      } : null,
     };
   }
 }

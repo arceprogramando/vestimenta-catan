@@ -10,24 +10,29 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import {
+  ApiBearerAuth,
   ApiTags,
   ApiOperation,
   ApiResponse,
   ApiParam,
   ApiBody,
 } from '@nestjs/swagger';
+import { Public } from '../auth/decorators/public.decorator';
+import { Roles } from '../auth/decorators/roles.decorator';
 import { ColoresService } from './colores.service';
 import { CreateColorDto } from './dto/create-color.dto';
 import { UpdateColorDto } from './dto/update-color.dto';
 
 @ApiTags('colores')
+@ApiBearerAuth()
 @Controller('colores')
 export class ColoresController {
   constructor(private readonly coloresService: ColoresService) {}
 
   @Post()
+  @Roles('admin')
   @ApiOperation({
-    summary: 'Crear un nuevo color para productos',
+    summary: 'Crear un nuevo color para productos (solo admin)',
     description:
       'Registra un nuevo color disponible para las variantes de productos. Los colores se usan para categorizar y diferenciar las variantes de un mismo producto. Ejemplos: Rojo, Azul marino, Verde oliva, etc.',
   })
@@ -81,6 +86,7 @@ export class ColoresController {
   }
 
   @Get()
+  @Public()
   @ApiOperation({
     summary: 'Obtener todos los colores disponibles',
     description:
@@ -122,6 +128,7 @@ export class ColoresController {
   }
 
   @Get(':id')
+  @Public()
   @ApiOperation({ summary: 'Obtener un color por ID' })
   @ApiParam({ name: 'id', description: 'ID del color', type: 'integer' })
   @ApiResponse({ status: 200, description: 'Color encontrado.' })
@@ -135,7 +142,8 @@ export class ColoresController {
   }
 
   @Patch(':id')
-  @ApiOperation({ summary: 'Actualizar un color' })
+  @Roles('admin')
+  @ApiOperation({ summary: 'Actualizar un color (solo admin)' })
   @ApiParam({ name: 'id', description: 'ID del color', type: 'integer' })
   @ApiBody({ type: UpdateColorDto })
   @ApiResponse({ status: 200, description: 'Color actualizado.' })
@@ -152,7 +160,8 @@ export class ColoresController {
   }
 
   @Delete(':id')
-  @ApiOperation({ summary: 'Eliminar un color' })
+  @Roles('admin')
+  @ApiOperation({ summary: 'Eliminar un color (solo admin)' })
   @ApiParam({ name: 'id', description: 'ID del color', type: 'integer' })
   @ApiResponse({ status: 200, description: 'Color eliminado.' })
   @ApiResponse({ status: 404, description: 'Color no encontrado.' })

@@ -2,53 +2,37 @@ import {
   IsInt,
   IsOptional,
   IsString,
-  IsNotEmpty,
   Min,
   IsEnum,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { Transform } from 'class-transformer';
 
 enum EstadoReserva {
   PENDIENTE = 'pendiente',
-  CONFIRMADA = 'confirmada',
-  CANCELADA = 'cancelada',
-  ENTREGADA = 'entregada',
+  CONFIRMADO = 'confirmado',
+  CANCELADO = 'cancelado',
+  COMPLETADO = 'completado',
 }
 
 export class CreateReservaDto {
   @ApiProperty({
-    description: 'ID del producto a reservar',
+    description: 'ID de la variante del producto (producto + talle + color)',
     example: 1,
     type: 'integer',
     minimum: 1,
   })
-  @IsInt({ message: 'El ID del producto debe ser un número entero' })
-  producto_id: number;
+  @IsInt({ message: 'El ID de la variante debe ser un número entero' })
+  variante_id: number;
 
   @ApiPropertyOptional({
-    description:
-      'ID del talle (opcional si el producto no tiene talles específicos)',
+    description: 'ID del usuario que realiza la reserva',
     example: 1,
     type: 'integer',
     minimum: 1,
   })
-  @IsInt({ message: 'El ID del talle debe ser un número entero' })
+  @IsInt({ message: 'El ID del usuario debe ser un número entero' })
   @IsOptional()
-  @Transform(({ value }: { value: string }) =>
-    value ? parseInt(value) : undefined,
-  )
-  talle_id?: number;
-
-  @ApiProperty({
-    description: 'ID del color del producto',
-    example: 1,
-    type: 'integer',
-    minimum: 1,
-  })
-  @IsInt({ message: 'El ID del color debe ser un número entero' })
-  @Transform(({ value }: { value: string }) => parseInt(value))
-  color_id: number;
+  usuario_id?: number;
 
   @ApiProperty({
     description: 'Cantidad de productos a reservar',
@@ -60,17 +44,26 @@ export class CreateReservaDto {
   @Min(1, { message: 'La cantidad debe ser mayor a 0' })
   cantidad: number;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     description: 'Estado de la reserva',
-    enum: ['pendiente', 'confirmada', 'cancelada', 'entregada'],
+    enum: ['pendiente', 'confirmado', 'cancelado', 'completado'],
     example: 'pendiente',
     default: 'pendiente',
     type: 'string',
   })
   @IsEnum(EstadoReserva, {
-    message: 'El estado debe ser: pendiente, confirmada, cancelada o entregada',
+    message: 'El estado debe ser: pendiente, confirmado, cancelado o completado',
   })
   @IsString({ message: 'El estado debe ser una cadena de texto' })
-  @IsNotEmpty({ message: 'El estado es obligatorio' })
-  estado: string;
+  @IsOptional()
+  estado?: string;
+
+  @ApiPropertyOptional({
+    description: 'Notas adicionales de la reserva',
+    example: 'Entregar antes del mediodía',
+    type: 'string',
+  })
+  @IsString({ message: 'Las notas deben ser texto' })
+  @IsOptional()
+  notas?: string;
 }

@@ -3,26 +3,16 @@ import {
   IsNotEmpty,
   IsEnum,
   IsOptional,
-  IsInt,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 enum Genero {
   mujer = 'mujer',
   hombre = 'hombre',
-  niños_unisex = 'ni_os_unisex',
+  ninios = 'ninios',
 }
 
 export class CreateProductoDto {
-  @ApiProperty({
-    description: 'ID único del producto',
-    example: 1,
-    type: 'integer',
-    minimum: 1,
-  })
-  @IsInt({ message: 'El ID debe ser un número entero' })
-  id: number;
-
   @ApiProperty({
     description: 'Nombre del producto',
     example: 'Camiseta básica',
@@ -46,12 +36,12 @@ export class CreateProductoDto {
 
   @ApiProperty({
     description: 'Género del producto',
-    enum: ['mujer', 'hombre', 'ni_os_unisex'],
+    enum: ['mujer', 'hombre', 'ninios'],
     example: 'mujer',
     type: 'string',
   })
   @IsEnum(Genero, {
-    message: 'El género debe ser: mujer, hombre o ni_os_unisex',
+    message: 'El género debe ser: mujer, hombre o ninios',
   })
   genero: Genero;
 

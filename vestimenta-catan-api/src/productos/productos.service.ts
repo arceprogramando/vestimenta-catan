@@ -48,15 +48,15 @@ export class ProductosService {
 
   async findStockResumen() {
     const stockResumen = await this.prisma.$queryRaw<StockResumenItem[]>`
-      SELECT 
+      SELECT
         p.id,
         p.nombre,
         p.genero,
         p.descripcion,
         p.thumbnail,
         COALESCE(SUM(pv.cantidad), 0) as stock_total
-      FROM inventario.productos p 
-      LEFT JOIN inventario.producto_variantes pv ON p.id = pv.producto_id AND pv.is_active = true
+      FROM productos p
+      LEFT JOIN producto_variantes pv ON p.id = pv.producto_id AND pv.is_active = true
       WHERE p.is_active = true
       GROUP BY p.id, p.nombre, p.genero, p.descripcion, p.thumbnail
       ORDER BY stock_total DESC
@@ -134,20 +134,27 @@ export class ProductosService {
         },
       });
 
-      // 3. Marcar reservas como eliminadas
-      await tx.reservas.updateMany({
-        where: {
-          producto_id: id,
-          is_active: true,
-        },
-        data: {
-          is_active: false,
-          deleted_at: new Date(),
-          deleted_by: softDeleteDto?.deleted_by,
-          delete_reason: `Producto eliminado: ${softDeleteDto?.delete_reason || 'Sin razón especificada'}`,
-          updated_at: new Date(),
-        },
+      // 3. Marcar reservas asociadas a las variantes del producto como eliminadas
+      const varianteIds = await tx.producto_variantes.findMany({
+        where: { producto_id: id },
+        select: { id: true },
       });
+
+      if (varianteIds.length > 0) {
+        await tx.reservas.updateMany({
+          where: {
+            variante_id: { in: varianteIds.map(v => v.id) },
+            is_active: true,
+          },
+          data: {
+            is_active: false,
+            deleted_at: new Date(),
+            deleted_by: softDeleteDto?.deleted_by,
+            delete_reason: `Producto eliminado: ${softDeleteDto?.delete_reason || 'Sin razón especificada'}`,
+            updated_at: new Date(),
+          },
+        });
+      }
 
       return deletedProduct;
     });

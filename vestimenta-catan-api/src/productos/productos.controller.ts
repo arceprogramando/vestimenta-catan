@@ -10,24 +10,29 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import {
+  ApiBearerAuth,
   ApiTags,
   ApiOperation,
   ApiResponse,
   ApiParam,
   ApiBody,
 } from '@nestjs/swagger';
+import { Public } from '../auth/decorators/public.decorator';
+import { Roles } from '../auth/decorators/roles.decorator';
 import { ProductosService } from './productos.service';
 import { CreateProductoDto } from './dto/create-producto.dto';
 import { UpdateProductoDto } from './dto/update-producto.dto';
 
 @ApiTags('productos')
+@ApiBearerAuth()
 @Controller('productos')
 export class ProductosController {
   constructor(private readonly productosService: ProductosService) {}
 
   @Post()
+  @Roles('admin')
   @ApiOperation({
-    summary: 'Crear un nuevo producto de vestimenta',
+    summary: 'Crear un nuevo producto de vestimenta (solo admin)',
     description:
       'Permite registrar un nuevo producto en el inventario de vestimenta. Incluye información como nombre, descripción, género target, categoría y precio. El producto creado podrá tener variantes con diferentes talles y colores.',
   })
@@ -98,6 +103,7 @@ export class ProductosController {
   }
 
   @Get()
+  @Public()
   @ApiOperation({
     summary: 'Obtener todos los productos base del inventario',
     description:
@@ -136,6 +142,7 @@ export class ProductosController {
   }
 
   @Get('stock-resumen')
+  @Public()
   @ApiOperation({
     summary: 'Obtener resumen de stock total por producto',
     description:
@@ -196,6 +203,7 @@ export class ProductosController {
   }
 
   @Get(':id')
+  @Public()
   @ApiOperation({
     summary: 'Obtener un producto específico por su ID',
     description:
@@ -244,8 +252,9 @@ export class ProductosController {
   }
 
   @Patch(':id')
+  @Roles('admin')
   @ApiOperation({
-    summary: 'Actualizar información de un producto existente',
+    summary: 'Actualizar información de un producto existente (solo admin)',
     description:
       'Permite modificar parcialmente los datos de un producto existente. Solo se actualizarán los campos proporcionados en el body. Útil para cambiar precios, descripciones, categorías o cualquier otro atributo del producto.',
   })
@@ -310,8 +319,9 @@ export class ProductosController {
   }
 
   @Delete(':id')
+  @Roles('admin')
   @ApiOperation({
-    summary: 'Eliminar un producto del inventario',
+    summary: 'Eliminar un producto del inventario (solo admin)',
     description:
       'Elimina permanentemente un producto del sistema. ADVERTENCIA: Esta acción también eliminará todas las variantes de producto y reservas asociadas. Use con precaución ya que esta operación no es reversible.',
   })

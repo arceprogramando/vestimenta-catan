@@ -10,17 +10,21 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import {
+  ApiBearerAuth,
   ApiTags,
   ApiOperation,
   ApiResponse,
   ApiParam,
   ApiBody,
 } from '@nestjs/swagger';
+import { Public } from '../auth/decorators/public.decorator';
+import { Roles } from '../auth/decorators/roles.decorator';
 import { ProductoVariantesService } from './producto-variantes.service';
 import { CreateProductoVarianteDto } from './dto/create-producto-variante.dto';
 import { UpdateProductoVarianteDto } from './dto/update-producto-variante.dto';
 
 @ApiTags('producto-variantes')
+@ApiBearerAuth()
 @Controller('producto-variantes')
 export class ProductoVariantesController {
   constructor(
@@ -28,7 +32,8 @@ export class ProductoVariantesController {
   ) {}
 
   @Post()
-  @ApiOperation({ summary: 'Crear una nueva variante de producto' })
+  @Roles('admin')
+  @ApiOperation({ summary: 'Crear una nueva variante de producto (solo admin)' })
   @ApiBody({ type: CreateProductoVarianteDto })
   @ApiResponse({
     status: 201,
@@ -40,62 +45,22 @@ export class ProductoVariantesController {
   }
 
   @Get()
+  @Public()
   @ApiOperation({
     summary: 'Obtener todas las variantes de productos (Stock detallado)',
     description:
-      'Retorna las 63 variantes de productos con stock específico por talle y color. Cada variante representa una combinación única de producto + talle + color con su cantidad disponible. AQUÍ están las 233 unidades individuales que conforman el inventario total.',
+      'Retorna las variantes de productos con stock específico por talle y color.',
   })
   @ApiResponse({
     status: 200,
-    description:
-      'Lista completa de variantes con stock detallado. Total: 63 variantes con 233 unidades.',
-    schema: {
-      type: 'array',
-      example: [
-        {
-          id: 1,
-          producto_id: 1,
-          talle_id: 5,
-          color_id: 1,
-          cantidad: 8,
-          producto: {
-            nombre: 'remera térmica',
-            genero: 'mujer',
-          },
-          talle: {
-            nombre_talle: 'S',
-          },
-          color: {
-            nombre: 'Blanco',
-            codigo_hex: '#FFFFFF',
-          },
-        },
-        {
-          id: 2,
-          producto_id: 1,
-          talle_id: 6,
-          color_id: 1,
-          cantidad: 12,
-          producto: {
-            nombre: 'remera térmica',
-            genero: 'mujer',
-          },
-          talle: {
-            nombre_talle: 'M',
-          },
-          color: {
-            nombre: 'Blanco',
-            codigo_hex: '#FFFFFF',
-          },
-        },
-      ],
-    },
+    description: 'Lista completa de variantes con stock detallado.',
   })
   findAll() {
     return this.productoVariantesService.findAll();
   }
 
   @Get(':id')
+  @Public()
   @ApiOperation({ summary: 'Obtener una variante de producto por ID' })
   @ApiParam({
     name: 'id',
@@ -118,7 +83,8 @@ export class ProductoVariantesController {
   }
 
   @Patch(':id')
-  @ApiOperation({ summary: 'Actualizar una variante de producto' })
+  @Roles('admin')
+  @ApiOperation({ summary: 'Actualizar una variante de producto (solo admin)' })
   @ApiParam({
     name: 'id',
     description: 'ID de la variante de producto',
@@ -141,7 +107,8 @@ export class ProductoVariantesController {
   }
 
   @Delete(':id')
-  @ApiOperation({ summary: 'Eliminar una variante de producto' })
+  @Roles('admin')
+  @ApiOperation({ summary: 'Eliminar una variante de producto (solo admin)' })
   @ApiParam({
     name: 'id',
     description: 'ID de la variante de producto',

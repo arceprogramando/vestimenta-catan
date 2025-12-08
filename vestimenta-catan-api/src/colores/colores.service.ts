@@ -1,7 +1,13 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateColorDto } from './dto/create-color.dto';
 import { UpdateColorDto } from './dto/update-color.dto';
+
+// DTO para eliminación lógica
+export interface SoftDeleteDto {
+  deleted_by?: string;
+  delete_reason?: string;
+}
 
 @Injectable()
 export class ColoresService {
@@ -12,33 +18,36 @@ export class ColoresService {
       data: createColorDto,
     });
 
-    // Convertir BigInt a number para serialización JSON
     return {
       ...color,
       id: Number(color.id),
     };
   }
 
-  async findAll() {
+  async findAll(includeDeleted = false) {
     const colores = await this.prisma.colores.findMany({
+      where: includeDeleted ? undefined : { is_active: true },
       orderBy: { nombre: 'asc' },
     });
 
-    // Convertir BigInt a number para serialización JSON
     return colores.map((color) => ({
       ...color,
       id: Number(color.id),
     }));
   }
 
-  async findOne(id: number) {
+  async findOne(id: number, includeDeleted = false) {
     const color = await this.prisma.colores.findUnique({
-      where: { id: BigInt(id) },
+      where: {
+        id: BigInt(id),
+        ...(includeDeleted ? {} : { is_active: true }),
+      },
       include: {
         producto_variantes: {
+          where: { is_active: true },
           include: {
-            productos: true,
-            talles: true,
+            producto: true,
+            talle: true,
           },
         },
       },
@@ -46,7 +55,6 @@ export class ColoresService {
 
     if (!color) return null;
 
-    // Convertir BigInt a number para serialización JSON
     return {
       ...color,
       id: Number(color.id),
@@ -55,51 +63,83 @@ export class ColoresService {
         id: Number(pv.id),
         color_id: Number(pv.color_id),
         talle_id: pv.talle_id ? Number(pv.talle_id) : null,
-        talles: pv.talles ? { ...pv.talles, id: Number(pv.talles.id) } : null,
+        talle: pv.talle ? { ...pv.talle, id: Number(pv.talle.id) } : null,
       })),
     };
   }
 
   async update(id: number, updateColorDto: UpdateColorDto) {
-    // Primero verificamos si el color existe
-    const existingColor = await this.prisma.colores.findUnique({
-      where: { id: BigInt(id) },
-    });
-
+    const existingColor = await this.findOne(id);
     if (!existingColor) {
-      return null; // El controlador manejará el 404
+      throw new NotFoundException('Color no encontrado o fue eliminado');
     }
 
     const color = await this.prisma.colores.update({
       where: { id: BigInt(id) },
-      data: updateColorDto,
+      data: {
+        ...updateColorDto,
+        updated_at: new Date(),
+      },
     });
 
-    // Convertir BigInt a number para serialización JSON
     return {
       ...color,
       id: Number(color.id),
     };
   }
 
-  async remove(id: number) {
-    // Primero verificamos si el color existe
-    const existingColor = await this.prisma.colores.findUnique({
-      where: { id: BigInt(id) },
-    });
-
+  // Eliminación lógica
+  async remove(id: number, softDeleteDto?: SoftDeleteDto) {
+    const existingColor = await this.findOne(id);
     if (!existingColor) {
-      return null; // El controlador manejará el 404
+      throw new NotFoundException('Color no encontrado o ya fue eliminado');
     }
 
-    const color = await this.prisma.colores.delete({
+    const color = await this.prisma.colores.update({
       where: { id: BigInt(id) },
+      data: {
+        is_active: false,
+        deleted_at: new Date(),
+        deleted_by: softDeleteDto?.deleted_by,
+        delete_reason: softDeleteDto?.delete_reason,
+        updated_at: new Date(),
+      },
     });
 
-    // Convertir BigInt a number para serialización JSON
     return {
       ...color,
       id: Number(color.id),
+    };
+  }
+
+  // Restaurar color eliminado
+  async restore(id: number) {
+    const color = await this.prisma.colores.findUnique({
+      where: { id: BigInt(id) },
+    });
+
+    if (!color) {
+      throw new NotFoundException('Color no encontrado');
+    }
+
+    if (color.is_active) {
+      throw new Error('El color no está eliminado');
+    }
+
+    const restored = await this.prisma.colores.update({
+      where: { id: BigInt(id) },
+      data: {
+        is_active: true,
+        deleted_at: null,
+        deleted_by: null,
+        delete_reason: null,
+        updated_at: new Date(),
+      },
+    });
+
+    return {
+      ...restored,
+      id: Number(restored.id),
     };
   }
 }

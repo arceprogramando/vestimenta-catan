@@ -7,104 +7,234 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// ============================================
+// ENUMS
+// ============================================
+
+enum genero {
+  mujer
+  hombre
+  ninios
+}
+
+enum rol_usuario {
+  user
+  admin
+}
+
+enum estado_reserva {
+  pendiente
+  confirmado
+  cancelado
+  completado
+}
+
+// ============================================
+// INVENTARIO - CATÁLOGO
+// ============================================
+
 model colores {
   id                 BigInt               @id @default(autoincrement())
   nombre             String               @unique
+
+  // Auditoría completa
   created_at         DateTime             @default(now()) @db.Timestamptz(6)
+  created_by         String?
   updated_at         DateTime             @default(now()) @db.Timestamptz(6)
+  updated_by         String?
   deleted_at         DateTime?            @db.Timestamptz(6)
-  is_active          Boolean              @default(true)
   deleted_by         String?
   delete_reason      String?
+  is_active          Boolean              @default(true)
+
+  // Relaciones
   producto_variantes producto_variantes[]
-  reservas           reservas[]
 
   @@index([is_active], map: "ix_colores_active")
 }
 
-/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model talles {
+  id                 BigInt               @id @default(autoincrement())
+  nombre             String               @unique
+  orden              Int?                 // Para ordenar talles (S=1, M=2, L=3, etc.)
+
+  // Auditoría completa
+  created_at         DateTime             @default(now()) @db.Timestamptz(6)
+  created_by         String?
+  updated_at         DateTime             @default(now()) @db.Timestamptz(6)
+  updated_by         String?
+  deleted_at         DateTime?            @db.Timestamptz(6)
+  deleted_by         String?
+  delete_reason      String?
+  is_active          Boolean              @default(true)
+
+  // Relaciones
+  producto_variantes producto_variantes[]
+
+  @@index([is_active], map: "ix_talles_active")
+}
+
+model productos {
+  id                 Int                  @id @default(autoincrement())
+  nombre             String
+  descripcion        String?
+  genero             genero
+  thumbnail          String?
+
+  // Auditoría completa
+  created_at         DateTime             @default(now()) @db.Timestamptz(6)
+  created_by         String?
+  updated_at         DateTime             @default(now()) @db.Timestamptz(6)
+  updated_by         String?
+  deleted_at         DateTime?            @db.Timestamptz(6)
+  deleted_by         String?
+  delete_reason      String?
+  is_active          Boolean              @default(true)
+
+  // Relaciones
+  producto_variantes producto_variantes[]
+
+  @@index([is_active], map: "ix_productos_active")
+  @@index([genero], map: "ix_productos_genero")
+}
+
+// ============================================
+// INVENTARIO - STOCK
+// ============================================
+
 model producto_variantes {
   id            BigInt    @id @default(autoincrement())
   producto_id   Int
   talle_id      BigInt?
   color_id      BigInt
   cantidad      Int       @default(0)
+
+  // Auditoría completa
   created_at    DateTime  @default(now()) @db.Timestamptz(6)
+  created_by    String?
   updated_at    DateTime  @default(now()) @db.Timestamptz(6)
-  delete_reason String?
+  updated_by    String?
   deleted_at    DateTime? @db.Timestamptz(6)
   deleted_by    String?
+  delete_reason String?
   is_active     Boolean   @default(true)
-  colores       colores   @relation(fields: [color_id], references: [id], onUpdate: NoAction, map: "fk_pv_color")
-  productos     productos @relation(fields: [producto_id], references: [id], onUpdate: NoAction, map: "fk_pv_producto")
-  talles        talles?   @relation(fields: [talle_id], references: [id], onUpdate: NoAction, map: "fk_pv_talle")
 
-  @@unique([producto_id, talle_id, color_id], map: "ux_prod_talle_color")
-  @@index([is_active], map: "ix_var_active")
-  @@index([color_id], map: "ix_var_color")
-  @@index([producto_id, talle_id, color_id], map: "ix_var_combo")
-  @@index([producto_id], map: "ix_var_prod")
-  @@index([talle_id], map: "ix_var_talle")
+  // Relaciones
+  producto      productos @relation(fields: [producto_id], references: [id], onDelete: Cascade)
+  talle         talles?   @relation(fields: [talle_id], references: [id], onDelete: SetNull)
+  color         colores   @relation(fields: [color_id], references: [id], onDelete: Cascade)
+  reservas      reservas[]
+
+  @@unique([producto_id, talle_id, color_id], map: "ux_variante_unica")
+  @@index([is_active], map: "ix_variantes_active")
+  @@index([producto_id], map: "ix_variantes_producto")
+  @@index([talle_id], map: "ix_variantes_talle")
+  @@index([color_id], map: "ix_variantes_color")
 }
 
-model productos {
-  id                 Int                  @id
-  nombre             String
-  descripcion        String?
-  genero             genero
-  thumbnail          String?
-  created_at         DateTime             @default(now()) @db.Timestamptz(6)
-  updated_at         DateTime             @default(now()) @db.Timestamptz(6)
-  delete_reason      String?
-  deleted_at         DateTime?            @db.Timestamptz(6)
-  deleted_by         String?
-  is_active          Boolean              @default(true)
-  producto_variantes producto_variantes[]
-  reservas           reservas[]
+// ============================================
+// RESERVAS - NORMALIZADO
+// ============================================
 
-  @@index([is_active], map: "ix_productos_active")
-}
-
-/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model reservas {
-  id            BigInt    @id @default(autoincrement())
-  producto_id   Int
-  talle_id      BigInt?
-  color_id      BigInt
+  id            BigInt         @id @default(autoincrement())
+  variante_id   BigInt         // FK a producto_variantes (normalizado)
+  usuario_id    BigInt?
   cantidad      Int
-  estado        String
-  fecha_reserva DateTime  @default(now()) @db.Timestamptz(6)
-  created_at    DateTime  @default(now()) @db.Timestamptz(6)
-  updated_at    DateTime  @default(now()) @db.Timestamptz(6)
-  delete_reason String?
-  deleted_at    DateTime? @db.Timestamptz(6)
+  estado        estado_reserva @default(pendiente)
+  fecha_reserva DateTime       @default(now()) @db.Timestamptz(6)
+  notas         String?        // Notas adicionales de la reserva
+
+  // Auditoría completa
+  created_at    DateTime       @default(now()) @db.Timestamptz(6)
+  created_by    String?
+  updated_at    DateTime       @default(now()) @db.Timestamptz(6)
+  updated_by    String?
+  deleted_at    DateTime?      @db.Timestamptz(6)
   deleted_by    String?
-  is_active     Boolean   @default(true)
-  colores       colores   @relation(fields: [color_id], references: [id], onUpdate: NoAction)
-  productos     productos @relation(fields: [producto_id], references: [id], onUpdate: NoAction)
-  talles        talles?   @relation(fields: [talle_id], references: [id], onUpdate: NoAction)
+  delete_reason String?
+  is_active     Boolean        @default(true)
+
+  // Relaciones
+  variante      producto_variantes @relation(fields: [variante_id], references: [id], onDelete: Cascade)
+  usuario       usuarios?          @relation(fields: [usuario_id], references: [id], onDelete: SetNull)
 
   @@index([is_active], map: "ix_reservas_active")
   @@index([fecha_reserva], map: "ix_reservas_fecha")
+  @@index([usuario_id], map: "ix_reservas_usuario")
+  @@index([variante_id], map: "ix_reservas_variante")
+  @@index([estado], map: "ix_reservas_estado")
 }
 
-model talles {
-  id                 BigInt               @id @default(autoincrement())
-  nombre_talle       String               @unique(map: "talles_label_key")
-  created_at         DateTime             @default(now()) @db.Timestamptz(6)
-  updated_at         DateTime             @default(now()) @db.Timestamptz(6)
-  deleted_at         DateTime?            @db.Timestamptz(6)
-  is_active          Boolean              @default(true)
-  deleted_by         String?
-  delete_reason      String?
-  producto_variantes producto_variantes[]
-  reservas           reservas[]
+// ============================================
+// AUTENTICACIÓN Y USUARIOS
+// ============================================
 
-  @@index([is_active], map: "ix_talles_active")
+model usuarios {
+  id             BigInt       @id @default(autoincrement())
+  email          String       @unique @db.VarChar(255)
+  password_hash  String       @db.VarChar(255)
+  nombre         String?      @db.VarChar(100)
+  apellido       String?      @db.VarChar(100)
+  rol            rol_usuario  @default(user)
+
+  // Auditoría completa
+  created_at     DateTime     @default(now()) @db.Timestamptz(6)
+  created_by     String?
+  updated_at     DateTime     @default(now()) @db.Timestamptz(6)
+  updated_by     String?
+  deleted_at     DateTime?    @db.Timestamptz(6)
+  deleted_by     String?
+  delete_reason  String?
+  is_active      Boolean      @default(true)
+
+  // Relaciones
+  refresh_tokens refresh_tokens[]
+  reservas       reservas[]
+
+  @@index([email], map: "ix_usuarios_email")
+  @@index([is_active], map: "ix_usuarios_active")
 }
 
-enum genero {
-  mujer
-  hombre
-  ni_os_unisex @map("niños unisex")
+model refresh_tokens {
+  id          BigInt    @id @default(autoincrement())
+  token_hash  String    @db.VarChar(255)
+  usuario_id  BigInt
+  expires_at  DateTime  @db.Timestamptz(6)
+  revoked     Boolean   @default(false)
+  revoked_at  DateTime? @db.Timestamptz(6)
+  created_at  DateTime  @default(now()) @db.Timestamptz(6)
+  user_agent  String?   @db.VarChar(500)
+  ip_address  String?   @db.VarChar(45)
+
+  // Relación
+  usuario     usuarios  @relation(fields: [usuario_id], references: [id], onDelete: Cascade)
+
+  @@index([token_hash], map: "ix_refresh_tokens_hash")
+  @@index([usuario_id], map: "ix_refresh_tokens_usuario")
+  @@index([usuario_id, revoked], map: "ix_refresh_tokens_usuario_revoked")
+}
+
+// ============================================
+// AUDITORÍA - LOG DE CAMBIOS
+// ============================================
+
+model audit_log {
+  id            BigInt   @id @default(autoincrement())
+  tabla         String   @db.VarChar(100)  // Nombre de la tabla afectada
+  registro_id   String   @db.VarChar(50)   // ID del registro (string para flexibilidad)
+  accion        String   @db.VarChar(20)   // CREATE, UPDATE, DELETE, RESTORE
+  datos_antes   Json?                       // Estado anterior (para UPDATE/DELETE)
+  datos_despues Json?                       // Estado nuevo (para CREATE/UPDATE)
+  campos_modificados String[]              // Lista de campos que cambiaron
+  usuario_id    BigInt?
+  usuario_email String?  @db.VarChar(255)  // Guardamos email por si el usuario se elimina
+  ip_address    String?  @db.VarChar(45)
+  user_agent    String?  @db.VarChar(500)
+  created_at    DateTime @default(now()) @db.Timestamptz(6)
+
+  @@index([tabla, registro_id], map: "ix_audit_tabla_registro")
+  @@index([usuario_id], map: "ix_audit_usuario")
+  @@index([created_at], map: "ix_audit_fecha")
+  @@index([accion], map: "ix_audit_accion")
 }

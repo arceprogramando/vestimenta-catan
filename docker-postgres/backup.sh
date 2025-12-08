@@ -3,8 +3,8 @@
 # Script de backup automático para PostgreSQL
 # Configuración
 CONTAINER_NAME="pg17"
-DB_USER="FelipeArce"
-DB_NAME="vestimenta_catan_dev"
+DB_USER="postgres"
+DB_NAME="vestimenta_catan_db"
 BACKUP_DIR="./backups"
 RETENTION_DAYS=7
 

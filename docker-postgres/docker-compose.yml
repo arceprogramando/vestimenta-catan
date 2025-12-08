@@ -1,6 +1,6 @@
 services:
   db:
-    image: vestimentacatan:latest
+    image: postgres:17-alpine
     container_name: pg17
     restart: unless-stopped
     env_file:
@@ -48,7 +48,7 @@ services:
       sh -c "
       while true; do
         echo 'Creating backup...'
-        pg_dump -h db -U ${POSTGRES_USER} -d vestimenta_catan_dev > /backups/backup_$$(date +%Y%m%d_%H%M%S).sql
+        pg_dump -h db -U ${POSTGRES_USER} -d ${POSTGRES_DB} > /backups/backup_$$(date +%Y%m%d_%H%M%S).sql
         echo 'Backup created successfully'
         sleep 86400
       done

@@ -8,9 +8,14 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Loader2, Eye, EyeOff, Check } from 'lucide-react';
+import { useAuth, useRedirectIfAuthenticated } from '@/hooks/use-auth';
+import { GoogleLoginButton } from '@/components/auth';
 
 export default function RegistroPage() {
   const router = useRouter();
+  const { register, isLoading, error, clearError } = useAuth();
+  const { isHydrated } = useRedirectIfAuthenticated('/');
+
   const [formData, setFormData] = useState({
     nombre: '',
     apellido: '',
@@ -19,66 +24,59 @@ export default function RegistroPage() {
     confirmPassword: '',
   });
   const [showPassword, setShowPassword] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [localError, setLocalError] = useState<string | null>(null);
+  const [googleError, setGoogleError] = useState<string | null>(null);
 
   const passwordRequirements = [
-    { label: 'Mínimo 8 caracteres', met: formData.password.length >= 8 },
-    { label: 'Una mayúscula', met: /[A-Z]/.test(formData.password) },
-    { label: 'Una minúscula', met: /[a-z]/.test(formData.password) },
-    { label: 'Un número', met: /\d/.test(formData.password) },
+    { label: 'Minimo 8 caracteres', met: formData.password.length >= 8 },
+    { label: 'Una mayuscula', met: /[A-Z]/.test(formData.password) },
+    { label: 'Una minuscula', met: /[a-z]/.test(formData.password) },
+    { label: 'Un numero', met: /\d/.test(formData.password) },
   ];
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
+    setLocalError(null);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError(null);
+    clearError();
+    setLocalError(null);
 
     if (formData.password !== formData.confirmPassword) {
-      setError('Las contraseñas no coinciden');
+      setLocalError('Las contrasenas no coinciden');
       return;
     }
 
     if (!passwordRequirements.every(r => r.met)) {
-      setError('La contraseña no cumple los requisitos');
+      setLocalError('La contrasena no cumple los requisitos');
       return;
     }
 
-    setLoading(true);
-
     try {
-      const response = await fetch('http://localhost:3000/api/auth/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          nombre: formData.nombre,
-          apellido: formData.apellido,
-          email: formData.email,
-          password: formData.password,
-        }),
-        credentials: 'include',
+      await register({
+        nombre: formData.nombre,
+        apellido: formData.apellido,
+        email: formData.email,
+        password: formData.password,
       });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || 'Error al registrarse');
-      }
-
-      // TODO: Guardar token en context
-      localStorage.setItem('accessToken', data.accessToken);
-      localStorage.setItem('user', JSON.stringify(data.user));
-
       router.push('/');
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error desconocido');
-    } finally {
-      setLoading(false);
+    } catch {
+      // El error ya esta en el store
     }
   };
+
+  const displayError = localError || googleError || error;
+
+  // Mostrar loading mientras se hidrata
+  if (!isHydrated) {
+    return (
+      <div className="container mx-auto px-4 py-12 flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto px-4 py-12 flex items-center justify-center">
@@ -91,11 +89,24 @@ export default function RegistroPage() {
         </CardHeader>
         <form onSubmit={handleSubmit}>
           <CardContent className="space-y-4">
-            {error && (
+            {displayError && (
               <div className="p-3 text-sm text-destructive bg-destructive/10 rounded-md">
-                {error}
+                {displayError}
               </div>
             )}
+
+            <GoogleLoginButton onError={(err) => { clearError(); setLocalError(null); setGoogleError(err); }} />
+
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-background px-2 text-muted-foreground">
+                  O registrate con email
+                </span>
+              </div>
+            </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
@@ -107,7 +118,7 @@ export default function RegistroPage() {
                   value={formData.nombre}
                   onChange={handleChange}
                   required
-                  disabled={loading}
+                  disabled={isLoading}
                 />
               </div>
               <div className="space-y-2">
@@ -115,10 +126,10 @@ export default function RegistroPage() {
                 <Input
                   id="apellido"
                   name="apellido"
-                  placeholder="Pérez"
+                  placeholder="Perez"
                   value={formData.apellido}
                   onChange={handleChange}
-                  disabled={loading}
+                  disabled={isLoading}
                 />
               </div>
             </div>
@@ -133,22 +144,22 @@ export default function RegistroPage() {
                 value={formData.email}
                 onChange={handleChange}
                 required
-                disabled={loading}
+                disabled={isLoading}
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="password">Contraseña</Label>
+              <Label htmlFor="password">Contrasena</Label>
               <div className="relative">
                 <Input
                   id="password"
                   name="password"
                   type={showPassword ? 'text' : 'password'}
-                  placeholder="••••••••"
+                  placeholder="********"
                   value={formData.password}
                   onChange={handleChange}
                   required
-                  disabled={loading}
+                  disabled={isLoading}
                 />
                 <Button
                   type="button"
@@ -180,32 +191,32 @@ export default function RegistroPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="confirmPassword">Confirmar Contraseña</Label>
+              <Label htmlFor="confirmPassword">Confirmar Contrasena</Label>
               <Input
                 id="confirmPassword"
                 name="confirmPassword"
                 type="password"
-                placeholder="••••••••"
+                placeholder="********"
                 value={formData.confirmPassword}
                 onChange={handleChange}
                 required
-                disabled={loading}
+                disabled={isLoading}
               />
               {formData.confirmPassword && formData.password !== formData.confirmPassword && (
-                <p className="text-xs text-destructive">Las contraseñas no coinciden</p>
+                <p className="text-xs text-destructive">Las contrasenas no coinciden</p>
               )}
             </div>
           </CardContent>
 
           <CardFooter className="flex flex-col gap-4">
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            <Button type="submit" className="w-full" disabled={isLoading}>
+              {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Registrarse
             </Button>
             <p className="text-sm text-muted-foreground text-center">
-              ¿Ya tienes cuenta?{' '}
+              Ya tienes cuenta?{' '}
               <Link href="/login" className="text-primary hover:underline">
-                Inicia sesión
+                Inicia sesion
               </Link>
             </p>
           </CardFooter>

@@ -8,6 +8,21 @@ import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateUsuarioDto, UpdateUsuarioDto } from './dto';
 
+// Tipo para usuario sanitizado (sin datos sensibles)
+export interface SanitizedUser {
+  id: number;
+  email: string;
+  nombre: string | null;
+  apellido: string | null;
+  rol: string;
+  is_active: boolean;
+  created_at: Date;
+  updated_at: Date;
+  deleted_at: Date | null;
+  provider?: string;
+  avatar_url?: string | null;
+}
+
 @Injectable()
 export class UsuariosService {
   constructor(
@@ -52,6 +67,66 @@ export class UsuariosService {
     return this.prisma.usuarios.findUnique({
       where: { email, is_active: true },
     });
+  }
+
+  /**
+   * Buscar usuario por Google ID
+   */
+  async findByGoogleId(googleId: string): Promise<SanitizedUser | null> {
+    const usuario = await this.prisma.usuarios.findUnique({
+      where: { google_id: googleId, is_active: true },
+    });
+
+    if (!usuario) return null;
+    return this.sanitizeUser(usuario);
+  }
+
+  /**
+   * Crear usuario desde Google OAuth
+   */
+  async createFromGoogle(googlePayload: {
+    sub: string;
+    email: string;
+    name?: string;
+    given_name?: string;
+    family_name?: string;
+    picture?: string;
+  }): Promise<SanitizedUser> {
+    const usuario = await this.prisma.usuarios.create({
+      data: {
+        email: googlePayload.email,
+        google_id: googlePayload.sub,
+        nombre: googlePayload.given_name || googlePayload.name || null,
+        apellido: googlePayload.family_name || null,
+        avatar_url: googlePayload.picture || null,
+        provider: 'google',
+        password_hash: null, // Sin password para usuarios de Google
+      },
+    });
+
+    return this.sanitizeUser(usuario);
+  }
+
+  /**
+   * Vincular cuenta de Google a usuario existente
+   */
+  async linkGoogleAccount(
+    userId: number,
+    googlePayload: {
+      sub: string;
+      picture?: string;
+    },
+  ): Promise<SanitizedUser> {
+    const usuario = await this.prisma.usuarios.update({
+      where: { id: BigInt(userId) },
+      data: {
+        google_id: googlePayload.sub,
+        avatar_url: googlePayload.picture || undefined,
+        updated_at: new Date(),
+      },
+    });
+
+    return this.sanitizeUser(usuario);
   }
 
   /**
@@ -169,9 +244,12 @@ export class UsuariosService {
     created_at: Date;
     updated_at: Date;
     deleted_at: Date | null;
-    password_hash?: string;
-  }) {
-    const { password_hash, ...rest } = usuario;
+    password_hash?: string | null;
+    google_id?: string | null;
+    provider?: string;
+    avatar_url?: string | null;
+  }): SanitizedUser {
+    const { password_hash, google_id, ...rest } = usuario;
     return {
       ...rest,
       id: Number(rest.id),

@@ -2,20 +2,11 @@
 
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import Link from 'next/link';
-import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Loader2, Search, Filter } from 'lucide-react';
-
-interface Producto {
-  id: number;
-  nombre: string;
-  genero: string;
-  descripcion: string;
-  thumbnail: string;
-  stock_total: number;
-}
+import { Loader2, Search } from 'lucide-react';
+import { ProductCard } from '@/components/product-card';
+import { Producto } from '@/types/producto';
 
 export default function ProductosPage() {
   const searchParams = useSearchParams();
@@ -70,7 +61,7 @@ export default function ProductosPage() {
     }
   }, [generoFilter]);
 
-  const generos = ['todos', 'hombre', 'mujer', 'ninos'];
+  const generos = ['todos', 'hombre', 'mujer', 'ninios'];
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -95,7 +86,7 @@ export default function ProductosPage() {
               onClick={() => setSelectedGenero(genero)}
               className="capitalize"
             >
-              {genero === 'todos' ? 'Todos' : genero === 'ninos' ? 'Niños' : genero}
+              {genero === 'todos' ? 'Todos' : genero === 'ninios' ? 'Niños' : genero}
             </Button>
           ))}
         </div>
@@ -125,41 +116,7 @@ export default function ProductosPage() {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {filteredProductos.map((producto) => (
-              <Card key={producto.id} className="overflow-hidden hover:shadow-lg transition-shadow">
-                <div className="aspect-square relative bg-muted">
-                  <img
-                    src={producto.thumbnail}
-                    alt={producto.nombre}
-                    className="w-full h-full object-cover"
-                    onError={(e) => {
-                      e.currentTarget.src = '/images/products/remera-termica-hombre-1.jpeg';
-                    }}
-                  />
-                </div>
-                <CardContent className="p-4">
-                  <h3 className="font-semibold text-lg mb-1 line-clamp-1">
-                    {producto.nombre}
-                  </h3>
-                  <p className="text-sm text-muted-foreground mb-2 line-clamp-2">
-                    {producto.descripcion}
-                  </p>
-                  <div className="flex items-center justify-between">
-                    <span className="inline-block bg-secondary text-secondary-foreground text-xs px-2 py-1 rounded capitalize">
-                      {producto.genero}
-                    </span>
-                    <span className={`text-sm font-medium ${producto.stock_total > 0 ? 'text-green-600' : 'text-destructive'}`}>
-                      {producto.stock_total > 0 ? `Stock: ${producto.stock_total}` : 'Sin stock'}
-                    </span>
-                  </div>
-                </CardContent>
-                <CardFooter className="p-4 pt-0">
-                  <Button className="w-full" variant="outline" asChild>
-                    <Link href={`/productos/${producto.id}`}>
-                      Ver detalle
-                    </Link>
-                  </Button>
-                </CardFooter>
-              </Card>
+              <ProductCard key={producto.id} producto={producto} />
             ))}
           </div>
 

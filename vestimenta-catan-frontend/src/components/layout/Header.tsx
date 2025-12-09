@@ -1,9 +1,9 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useState } from 'react';
-import { Menu, X, ShoppingBag, User, LogIn } from 'lucide-react';
+import { Menu, ShoppingBag, LogIn, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Sheet,
@@ -20,25 +20,39 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { useAuth } from '@/hooks/use-auth';
 
 const navigation = [
   { name: 'Inicio', href: '/' },
   { name: 'Productos', href: '/productos' },
   { name: 'Hombre', href: '/productos?genero=hombre' },
   { name: 'Mujer', href: '/productos?genero=mujer' },
-  { name: 'Niños', href: '/productos?genero=ninos' },
+  { name: 'Ninos', href: '/productos?genero=ninos' },
 ];
 
 export function Header() {
   const pathname = usePathname();
+  const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
-  // TODO: Implementar auth context
-  const isLoggedIn = false;
-  const user = null;
+  const { user, isAuthenticated, isHydrated, logout, fullName, isAdmin } = useAuth();
 
   const isActive = (href: string) => {
     if (href === '/') return pathname === '/';
     return pathname.startsWith(href.split('?')[0]);
+  };
+
+  const handleLogout = async () => {
+    await logout();
+    setIsOpen(false);
+    router.push('/');
+  };
+
+  const getInitials = () => {
+    if (!user) return 'U';
+    if (user.nombre) {
+      return `${user.nombre[0]}${user.apellido?.[0] || ''}`.toUpperCase();
+    }
+    return user.email[0].toUpperCase();
   };
 
   return (
@@ -49,7 +63,7 @@ export function Header() {
           <Link href="/" className="flex items-center space-x-2">
             <ShoppingBag className="h-6 w-6" />
             <span className="font-bold text-xl hidden sm:inline-block">
-              Vestimenta Catán
+              Vestimenta Catan
             </span>
             <span className="font-bold text-xl sm:hidden">VC</span>
           </Link>
@@ -73,16 +87,30 @@ export function Header() {
 
           {/* Desktop Auth/User */}
           <div className="hidden md:flex items-center space-x-4">
-            {isLoggedIn ? (
+            {!isHydrated ? (
+              <div className="h-8 w-8 rounded-full bg-muted animate-pulse" />
+            ) : isAuthenticated && user ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" className="relative h-8 w-8 rounded-full">
                     <Avatar className="h-8 w-8">
-                      <AvatarFallback>U</AvatarFallback>
+                      <AvatarFallback>{getInitials()}</AvatarFallback>
                     </Avatar>
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent className="w-56" align="end" forceMount>
+                  <div className="flex items-center justify-start gap-2 p-2">
+                    <div className="flex flex-col space-y-1 leading-none">
+                      <p className="font-medium">{fullName}</p>
+                      <p className="text-xs text-muted-foreground">{user.email}</p>
+                      {isAdmin && (
+                        <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded w-fit">
+                          Admin
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <DropdownMenuSeparator />
                   <DropdownMenuItem asChild>
                     <Link href="/perfil">Mi Perfil</Link>
                   </DropdownMenuItem>
@@ -90,8 +118,12 @@ export function Header() {
                     <Link href="/mis-reservas">Mis Reservas</Link>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem className="text-red-600">
-                    Cerrar Sesión
+                  <DropdownMenuItem
+                    className="text-red-600 cursor-pointer"
+                    onClick={handleLogout}
+                  >
+                    <LogOut className="mr-2 h-4 w-4" />
+                    Cerrar Sesion
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -115,14 +147,14 @@ export function Header() {
             <SheetTrigger asChild className="md:hidden">
               <Button variant="ghost" size="icon">
                 <Menu className="h-6 w-6" />
-                <span className="sr-only">Abrir menú</span>
+                <span className="sr-only">Abrir menu</span>
               </Button>
             </SheetTrigger>
             <SheetContent side="right" className="w-[300px] sm:w-[400px]">
               <SheetHeader>
                 <SheetTitle className="flex items-center space-x-2">
                   <ShoppingBag className="h-5 w-5" />
-                  <span>Vestimenta Catán</span>
+                  <span>Vestimenta Catan</span>
                 </SheetTitle>
               </SheetHeader>
 
@@ -144,22 +176,26 @@ export function Header() {
               </nav>
 
               <div className="absolute bottom-8 left-6 right-6">
-                {isLoggedIn ? (
+                {isAuthenticated && user ? (
                   <div className="space-y-4">
                     <div className="flex items-center space-x-3 p-2">
                       <Avatar className="h-10 w-10">
-                        <AvatarFallback>U</AvatarFallback>
+                        <AvatarFallback>{getInitials()}</AvatarFallback>
                       </Avatar>
                       <div>
-                        <p className="font-medium">Usuario</p>
-                        <p className="text-sm text-muted-foreground">user@email.com</p>
+                        <p className="font-medium">{fullName}</p>
+                        <p className="text-sm text-muted-foreground">{user.email}</p>
                       </div>
                     </div>
-                    <Button variant="outline" className="w-full" onClick={() => setIsOpen(false)}>
-                      <Link href="/perfil" className="w-full">Mi Perfil</Link>
+                    <Button variant="outline" className="w-full" asChild onClick={() => setIsOpen(false)}>
+                      <Link href="/perfil">Mi Perfil</Link>
                     </Button>
-                    <Button variant="destructive" className="w-full">
-                      Cerrar Sesión
+                    <Button variant="outline" className="w-full" asChild onClick={() => setIsOpen(false)}>
+                      <Link href="/mis-reservas">Mis Reservas</Link>
+                    </Button>
+                    <Button variant="destructive" className="w-full" onClick={handleLogout}>
+                      <LogOut className="mr-2 h-4 w-4" />
+                      Cerrar Sesion
                     </Button>
                   </div>
                 ) : (

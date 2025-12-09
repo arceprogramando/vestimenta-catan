@@ -76,9 +76,35 @@ export class ProductosService {
         id,
         ...(includeDeleted ? {} : { is_active: true }),
       },
+      include: {
+        producto_variantes: {
+          where: { is_active: true },
+          include: {
+            color: true,
+            talle: true,
+          },
+          orderBy: [
+            { talle: { orden: 'asc' } },
+            { color: { nombre: 'asc' } },
+          ],
+        },
+      },
     });
 
-    return producto;
+    if (!producto) return null;
+
+    // Serializar BigInt a Number
+    return {
+      ...producto,
+      producto_variantes: producto.producto_variantes.map(v => ({
+        ...v,
+        id: Number(v.id),
+        color_id: Number(v.color_id),
+        talle_id: v.talle_id ? Number(v.talle_id) : null,
+        color: v.color ? { ...v.color, id: Number(v.color.id) } : null,
+        talle: v.talle ? { ...v.talle, id: Number(v.talle.id) } : null,
+      })),
+    };
   }
 
   async update(id: number, updateProductoDto: UpdateProductoDto) {

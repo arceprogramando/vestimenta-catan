@@ -6,8 +6,9 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
+import { OAuth2Client } from 'google-auth-library';
 import { PrismaService } from '../prisma/prisma.service';
-import { UsuariosService } from '../usuarios/usuarios.service';
+import { UsuariosService, SanitizedUser } from '../usuarios/usuarios.service';
 import { LoginDto, RegisterDto } from './dto';
 import { JwtPayload } from './strategies/jwt.strategy';
 import { RefreshTokenPayload } from './strategies/jwt-refresh.strategy';
@@ -20,12 +21,18 @@ interface TokensResponse {
 
 @Injectable()
 export class AuthService {
+  private googleClient: OAuth2Client;
+
   constructor(
     private usuariosService: UsuariosService,
     private jwtService: JwtService,
     private configService: ConfigService,
     private prisma: PrismaService,
-  ) {}
+  ) {
+    this.googleClient = new OAuth2Client(
+      this.configService.get<string>('GOOGLE_CLIENT_ID'),
+    );
+  }
 
   /**
    * Registrar un nuevo usuario
@@ -69,7 +76,13 @@ export class AuthService {
       throw new UnauthorizedException('Credenciales inválidas');
     }
 
-    // Validar contraseña
+    // Validar contraseña (usuarios de Google no tienen password)
+    if (!user.password_hash) {
+      throw new UnauthorizedException(
+        'Esta cuenta usa login con Google. Por favor, inicia sesion con Google.',
+      );
+    }
+
     const isPasswordValid = await this.usuariosService.validatePassword(
       loginDto.password,
       user.password_hash,
@@ -105,6 +118,85 @@ export class AuthService {
         id: Number(sanitizedUser.id),
       },
     };
+  }
+
+  /**
+   * Login con Google OAuth
+   */
+  async googleLogin(credential: string, userAgent?: string, ipAddress?: string) {
+    // 1. Verificar el token de Google
+    const payload = await this.verifyGoogleToken(credential);
+
+    if (!payload || !payload.email) {
+      throw new UnauthorizedException('Token de Google invalido');
+    }
+
+    // 2. Buscar usuario por google_id
+    let user: SanitizedUser | null = await this.usuariosService.findByGoogleId(payload.sub);
+
+    if (!user) {
+      // 3. Buscar por email
+      const existingUser = await this.usuariosService.findByEmail(payload.email);
+
+      if (existingUser) {
+        // Vincular cuenta existente con Google
+        user = await this.usuariosService.linkGoogleAccount(
+          Number(existingUser.id),
+          { sub: payload.sub, picture: payload.picture },
+        );
+      } else {
+        // Crear nuevo usuario
+        user = await this.usuariosService.createFromGoogle({
+          sub: payload.sub,
+          email: payload.email,
+          name: payload.name,
+          given_name: payload.given_name,
+          family_name: payload.family_name,
+          picture: payload.picture,
+        });
+      }
+    }
+
+    if (!user) {
+      throw new UnauthorizedException('No se pudo crear o encontrar el usuario');
+    }
+
+    // 4. Generar tokens JWT
+    const tokens = await this.generateTokens(
+      Number(user.id),
+      user.email,
+      user.rol,
+    );
+
+    // 5. Guardar refresh token
+    await this.saveRefreshToken(
+      Number(user.id),
+      tokens.refreshToken,
+      userAgent,
+      ipAddress,
+    );
+
+    return {
+      ...tokens,
+      tokenType: 'Bearer',
+      user,
+    };
+  }
+
+  /**
+   * Verificar token de Google
+   */
+  private async verifyGoogleToken(credential: string) {
+    try {
+      const ticket = await this.googleClient.verifyIdToken({
+        idToken: credential,
+        audience: this.configService.get<string>('GOOGLE_CLIENT_ID'),
+      });
+
+      return ticket.getPayload();
+    } catch {
+      throw new UnauthorizedException('Token de Google invalido o expirado');
+    }
   }
 
   /**

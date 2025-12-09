@@ -24,7 +24,7 @@ import { AuthService } from './auth.service';
 import { CurrentUser } from './decorators/current-user.decorator';
 import type { RequestUser } from './decorators/current-user.decorator';
 import { Public } from './decorators/public.decorator';
-import { AuthResponseDto, LoginDto, MessageResponseDto, RegisterDto } from './dto';
+import { AuthResponseDto, GoogleAuthDto, LoginDto, MessageResponseDto, RegisterDto } from './dto';
 
 @ApiTags('Autenticación')
 @Controller('auth')
@@ -81,6 +81,41 @@ export class AuthController {
       req.ip || req.headers['x-forwarded-for']?.toString() || 'unknown';
 
     const result = await this.authService.login(loginDto, userAgent, ipAddress);
+
+    // Establecer refresh token en cookie httpOnly
+    this.setRefreshTokenCookie(res, result.refreshToken);
+
+    // No enviar el refresh token en el body
+    const { refreshToken, ...responseData } = result;
+
+    return responseData;
+  }
+
+  @Public()
+  @Post('google')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Login con Google OAuth' })
+  @ApiBody({ type: GoogleAuthDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Login con Google exitoso',
+    type: AuthResponseDto,
+  })
+  @ApiResponse({ status: 401, description: 'Token de Google invalido' })
+  async googleLogin(
+    @Body() googleAuthDto: GoogleAuthDto,
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const userAgent = req.headers['user-agent'];
+    const ipAddress =
+      req.ip || req.headers['x-forwarded-for']?.toString() || 'unknown';
+
+    const result = await this.authService.googleLogin(
+      googleAuthDto.credential,
+      userAgent,
+      ipAddress,
+    );
 
     // Establecer refresh token en cookie httpOnly
     this.setRefreshTokenCookie(res, result.refreshToken);

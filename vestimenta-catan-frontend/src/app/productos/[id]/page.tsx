@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Loader2, ArrowLeft, ShoppingCart, Package } from 'lucide-react';
+import { ReservaModal } from '@/components/reservas/ReservaModal';
 
 interface Variante {
   id: number;
@@ -30,6 +31,7 @@ interface Producto {
   descripcion: string;
   thumbnail: string;
   is_active: boolean;
+  precio: number | null;
   producto_variantes: Variante[];
 }
 
@@ -43,6 +45,7 @@ export default function ProductoDetallePage() {
   const [error, setError] = useState<string | null>(null);
   const [selectedTalle, setSelectedTalle] = useState<number | null>(null);
   const [selectedColor, setSelectedColor] = useState<number | null>(null);
+  const [modalOpen, setModalOpen] = useState(false);
 
   useEffect(() => {
     const fetchProducto = async () => {
@@ -69,7 +72,7 @@ export default function ProductoDetallePage() {
     }
   }, [productId]);
 
-  // Obtener talles y colores únicos
+  // Obtener talles y colores unicos
   const talles = producto?.producto_variantes
     .filter(v => v.talle)
     .map(v => v.talle!)
@@ -91,16 +94,24 @@ export default function ProductoDetallePage() {
     v.color.id === selectedColor
   );
 
-  // Stock disponible para la combinación seleccionada
+  // Stock disponible para la combinacion seleccionada
   const stockDisponible = varianteSeleccionada?.cantidad || 0;
 
   const formatGenero = (genero: string) => {
     switch (genero) {
-      case 'ninios': return 'Niños';
+      case 'ninios': return 'Ninos';
       case 'hombre': return 'Hombre';
       case 'mujer': return 'Mujer';
       default: return genero;
     }
+  };
+
+  const formatPrecio = (precio: number | null) => {
+    if (precio === null) return null;
+    return new Intl.NumberFormat('es-AR', {
+      style: 'currency',
+      currency: 'ARS',
+    }).format(precio);
   };
 
   if (loading) {
@@ -161,7 +172,14 @@ export default function ProductoDetallePage() {
             {formatGenero(producto.genero)}
           </span>
 
-          <h1 className="text-3xl font-bold mb-4">{producto.nombre}</h1>
+          <h1 className="text-3xl font-bold mb-2">{producto.nombre}</h1>
+
+          {/* Precio */}
+          {producto.precio && (
+            <p className="text-3xl font-bold text-primary mb-4">
+              {formatPrecio(producto.precio)}
+            </p>
+          )}
 
           <p className="text-muted-foreground mb-6">{producto.descripcion}</p>
 
@@ -226,7 +244,7 @@ export default function ProductoDetallePage() {
                   <span className={stockDisponible > 0 ? 'text-green-600' : 'text-destructive'}>
                     {stockDisponible > 0
                       ? `${stockDisponible} unidades disponibles`
-                      : 'Sin stock para esta combinación'
+                      : 'Sin stock para esta combinacion'
                     }
                   </span>
                 ) : (
@@ -238,11 +256,12 @@ export default function ProductoDetallePage() {
             </CardContent>
           </Card>
 
-          {/* Botón Reservar */}
+          {/* Boton Reservar */}
           <Button
             size="lg"
             className="w-full"
             disabled={!varianteSeleccionada || stockDisponible === 0}
+            onClick={() => setModalOpen(true)}
           >
             <ShoppingCart className="mr-2 h-5 w-5" />
             {stockDisponible > 0 ? 'Reservar producto' : 'Sin stock'}
@@ -250,7 +269,7 @@ export default function ProductoDetallePage() {
 
           {/* Info adicional */}
           <p className="text-sm text-muted-foreground mt-4 text-center">
-            Las reservas requieren confirmación
+            Las reservas requieren confirmacion
           </p>
         </div>
       </div>
@@ -292,6 +311,20 @@ export default function ProductoDetallePage() {
           </table>
         </div>
       </div>
+
+      {/* Modal de Reserva */}
+      {varianteSeleccionada && (
+        <ReservaModal
+          open={modalOpen}
+          onOpenChange={setModalOpen}
+          varianteId={varianteSeleccionada.id}
+          productoNombre={producto.nombre}
+          talleName={varianteSeleccionada.talle?.nombre}
+          colorName={varianteSeleccionada.color.nombre}
+          stockDisponible={stockDisponible}
+          precioUnitario={producto.precio}
+        />
+      )}
     </div>
   );
 }

@@ -1,7 +1,18 @@
+'use client';
+
 import Link from 'next/link';
-import { ShoppingBag } from 'lucide-react';
+import { ShoppingBag, MapPin } from 'lucide-react';
+import { useAuth } from '@/hooks/use-auth';
+import { InstagramIcon, WhatsAppIcon, MercadoPagoIcon } from '@/components/icons/SocialIcons';
+
+// Numero de WhatsApp (sin el + ni espacios)
+const WHATSAPP_NUMBER = '5491150990913';
+const WHATSAPP_MESSAGE = 'Hola buenas, estaria interesado en conocer mas acerca de tus prendas';
+const MERCADOPAGO_URL = 'https://link.mercadopago.com.ar/f12345678';
 
 export function Footer() {
+  const { isAuthenticated } = useAuth();
+
   return (
     <footer className="border-t bg-background">
       <div className="container mx-auto px-4 py-8">
@@ -10,11 +21,41 @@ export function Footer() {
           <div className="space-y-4">
             <Link href="/" className="flex items-center space-x-2">
               <ShoppingBag className="h-6 w-6" />
-              <span className="font-bold text-xl">Vestimenta Catán</span>
+              <span className="font-bold text-xl">Vestimenta Catan</span>
             </Link>
             <p className="text-sm text-muted-foreground">
-              Ropa térmica de calidad para toda la familia.
+              Ropa termica de calidad para toda la familia.
             </p>
+            {/* Redes sociales */}
+            <div className="flex gap-3">
+              <a
+                href="https://www.instagram.com/vestimenta.catan/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:opacity-80 transition-opacity"
+                aria-label="Instagram"
+              >
+                <InstagramIcon className="h-7 w-7" />
+              </a>
+              <a
+                href={`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(WHATSAPP_MESSAGE)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:opacity-80 transition-opacity"
+                aria-label="WhatsApp"
+              >
+                <WhatsAppIcon className="h-7 w-7" />
+              </a>
+              <a
+                href={MERCADOPAGO_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:opacity-80 transition-opacity"
+                aria-label="MercadoPago"
+              >
+                <MercadoPagoIcon className="h-7 w-7" />
+              </a>
+            </div>
           </div>
 
           {/* Links */}
@@ -32,8 +73,8 @@ export function Footer() {
                 </Link>
               </li>
               <li>
-                <Link href="/productos?genero=ninos" className="hover:text-primary">
-                  Niños
+                <Link href="/productos?genero=ninios" className="hover:text-primary">
+                  Ninos
                 </Link>
               </li>
             </ul>
@@ -43,16 +84,20 @@ export function Footer() {
           <div>
             <h3 className="font-semibold mb-4">Mi Cuenta</h3>
             <ul className="space-y-2 text-sm text-muted-foreground">
-              <li>
-                <Link href="/login" className="hover:text-primary">
-                  Ingresar
-                </Link>
-              </li>
-              <li>
-                <Link href="/registro" className="hover:text-primary">
-                  Registrarse
-                </Link>
-              </li>
+              {!isAuthenticated && (
+                <>
+                  <li>
+                    <Link href="/login" className="hover:text-primary">
+                      Ingresar
+                    </Link>
+                  </li>
+                  <li>
+                    <Link href="/registro" className="hover:text-primary">
+                      Registrarse
+                    </Link>
+                  </li>
+                </>
+              )}
               <li>
                 <Link href="/mis-reservas" className="hover:text-primary">
                   Mis Reservas
@@ -65,15 +110,19 @@ export function Footer() {
           <div>
             <h3 className="font-semibold mb-4">Contacto</h3>
             <ul className="space-y-2 text-sm text-muted-foreground">
-              <li>San Martín de los Andes</li>
-              <li>Neuquén, Argentina</li>
-              <li>info@vestimentacatan.com</li>
+              <li className="flex items-start gap-2">
+                <MapPin className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                <span>
+                  Gonzalez Catan, Buenos Aires<br />
+                  Argentina
+                </span>
+              </li>
             </ul>
           </div>
         </div>
 
         <div className="border-t mt-8 pt-8 text-center text-sm text-muted-foreground">
-          <p>&copy; {new Date().getFullYear()} Vestimenta Catán. Todos los derechos reservados.</p>
+          <p>&copy; {new Date().getFullYear()} Vestimenta Catan. Todos los derechos reservados.</p>
         </div>
       </div>
     </footer>

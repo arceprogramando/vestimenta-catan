@@ -108,7 +108,7 @@ export default function Home() {
             {[
               { name: 'Hombre', href: '/productos?genero=hombre', emoji: '👔' },
               { name: 'Mujer', href: '/productos?genero=mujer', emoji: '👗' },
-              { name: 'Niños', href: '/productos?genero=ninos', emoji: '🧒' },
+              { name: 'Niños', href: '/productos?genero=ninios', emoji: '🧒' },
             ].map((category) => (
               <Link
                 key={category.name}

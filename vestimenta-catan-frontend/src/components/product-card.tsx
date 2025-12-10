@@ -7,6 +7,11 @@ interface ProductCardProps {
   producto: Producto;
 }
 
+function formatGenero(genero: string): string {
+  if (genero === 'ninios') return 'Niños';
+  return genero.charAt(0).toUpperCase() + genero.slice(1);
+}
+
 export function ProductCard({ producto }: ProductCardProps) {
   return (
     <Card className="overflow-hidden hover:shadow-lg transition-shadow h-full flex flex-col">
@@ -28,8 +33,8 @@ export function ProductCard({ producto }: ProductCardProps) {
           {producto.descripcion}
         </p>
         <div className="flex items-center justify-between mt-auto">
-          <span className="inline-block bg-secondary text-secondary-foreground text-xs px-2 py-1 rounded capitalize">
-            {producto.genero}
+          <span className="inline-block bg-secondary text-secondary-foreground text-xs px-2 py-1 rounded">
+            {formatGenero(producto.genero)}
           </span>
           <span className={`text-sm font-medium ${producto.stock_total > 0 ? 'text-green-600' : 'text-destructive'}`}>
             {producto.stock_total > 0 ? `Stock: ${producto.stock_total}` : 'Sin stock'}

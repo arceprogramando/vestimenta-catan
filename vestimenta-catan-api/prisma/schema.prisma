@@ -80,6 +80,7 @@ model productos {
   descripcion        String?
   genero             genero
   thumbnail          String?
+  precio             Decimal?             @db.Decimal(10, 2)  // Precio de venta
 
   // Auditoría completa
   created_at         DateTime             @default(now()) @db.Timestamptz(6)
@@ -144,6 +145,20 @@ model reservas {
   estado        estado_reserva @default(pendiente)
   fecha_reserva DateTime       @default(now()) @db.Timestamptz(6)
   notas         String?        // Notas adicionales de la reserva
+
+  // Precios (snapshot al momento de la reserva)
+  precio_unitario    Decimal?  @db.Decimal(10, 2)
+  precio_total       Decimal?  @db.Decimal(10, 2)
+
+  // Tracking de estados
+  fecha_confirmacion DateTime? @db.Timestamptz(6)
+  confirmado_por     String?
+  fecha_cancelacion  DateTime? @db.Timestamptz(6)
+  cancelado_por      String?
+  motivo_cancelacion String?
+
+  // Contacto
+  telefono_contacto  String?   @db.VarChar(20)
 
   // Auditoría completa
   created_at    DateTime       @default(now()) @db.Timestamptz(6)

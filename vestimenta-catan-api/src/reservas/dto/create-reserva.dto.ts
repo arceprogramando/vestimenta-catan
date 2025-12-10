@@ -66,4 +66,13 @@ export class CreateReservaDto {
   @IsString({ message: 'Las notas deben ser texto' })
   @IsOptional()
   notas?: string;
+
+  @ApiPropertyOptional({
+    description: 'Teléfono de contacto del cliente',
+    example: '+54 9 2972 123456',
+    type: 'string',
+  })
+  @IsString({ message: 'El teléfono debe ser texto' })
+  @IsOptional()
+  telefono_contacto?: string;
 }

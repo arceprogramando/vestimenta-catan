@@ -2,6 +2,7 @@ import { Injectable, NotFoundException, BadRequestException } from '@nestjs/comm
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateReservaDto } from './dto/create-reserva.dto';
 import { UpdateReservaDto } from './dto/update-reserva.dto';
+import { Decimal } from '@prisma/client/runtime/library';
 
 // DTO para eliminación lógica
 export interface SoftDeleteDto {
@@ -38,6 +39,12 @@ export class ReservasService {
       );
     }
 
+    // Obtener precio del producto y calcular total
+    const precioUnitario = variante.producto.precio;
+    const precioTotal = precioUnitario
+      ? new Decimal(precioUnitario.toString()).mul(createReservaDto.cantidad)
+      : null;
+
     const reserva = await this.prisma.reservas.create({
       data: {
         variante_id: BigInt(createReservaDto.variante_id),
@@ -47,6 +54,9 @@ export class ReservasService {
         cantidad: createReservaDto.cantidad,
         estado: (createReservaDto.estado as any) || 'pendiente',
         notas: createReservaDto.notas,
+        telefono_contacto: createReservaDto.telefono_contacto,
+        precio_unitario: precioUnitario,
+        precio_total: precioTotal,
       },
       include: {
         variante: {
@@ -126,30 +136,60 @@ export class ReservasService {
     return this.serializeReserva(reserva);
   }
 
-  async update(id: number, updateReservaDto: UpdateReservaDto) {
+  async update(id: number, updateReservaDto: UpdateReservaDto, updatedBy?: string) {
     // Verificar que la reserva existe y está activa
-    const existing = await this.findOne(id);
+    const existing = await this.prisma.reservas.findUnique({
+      where: { id: BigInt(id), is_active: true },
+    });
+
     if (!existing) {
       throw new NotFoundException('Reserva no encontrada o fue eliminada');
     }
 
+    // Preparar datos de actualización
+    const updateData: any = {
+      updated_at: new Date(),
+    };
+
+    if (updateReservaDto.variante_id !== undefined) {
+      updateData.variante_id = BigInt(updateReservaDto.variante_id);
+    }
+    if (updateReservaDto.cantidad !== undefined) {
+      updateData.cantidad = updateReservaDto.cantidad;
+      // Recalcular precio total si cambia la cantidad
+      if (existing.precio_unitario) {
+        updateData.precio_total = new Decimal(existing.precio_unitario.toString())
+          .mul(updateReservaDto.cantidad);
+      }
+    }
+    if (updateReservaDto.notas !== undefined) {
+      updateData.notas = updateReservaDto.notas;
+    }
+    if (updateReservaDto.telefono_contacto !== undefined) {
+      updateData.telefono_contacto = updateReservaDto.telefono_contacto;
+    }
+
+    // Manejar cambios de estado
+    if (updateReservaDto.estado && updateReservaDto.estado !== existing.estado) {
+      updateData.estado = updateReservaDto.estado as any;
+
+      // Si se confirma
+      if (updateReservaDto.estado === 'confirmado') {
+        updateData.fecha_confirmacion = new Date();
+        updateData.confirmado_por = updatedBy;
+      }
+
+      // Si se cancela
+      if (updateReservaDto.estado === 'cancelado') {
+        updateData.fecha_cancelacion = new Date();
+        updateData.cancelado_por = updatedBy;
+        updateData.motivo_cancelacion = updateReservaDto.motivo_cancelacion;
+      }
+    }
+
     const reserva = await this.prisma.reservas.update({
       where: { id: BigInt(id) },
-      data: {
-        ...(updateReservaDto.variante_id && {
-          variante_id: BigInt(updateReservaDto.variante_id)
-        }),
-        ...(updateReservaDto.cantidad !== undefined && {
-          cantidad: updateReservaDto.cantidad
-        }),
-        ...(updateReservaDto.estado && {
-          estado: updateReservaDto.estado as any
-        }),
-        ...(updateReservaDto.notas !== undefined && {
-          notas: updateReservaDto.notas
-        }),
-        updated_at: new Date(),
-      },
+      data: updateData,
       include: {
         variante: {
           include: {
@@ -229,7 +269,7 @@ export class ReservasService {
     return this.serializeReserva(restored);
   }
 
-  // Helper para serializar BigInt a Number en la respuesta
+  // Helper para serializar BigInt y Decimal a tipos seguros para JSON
   private serializeReserva(reserva: any) {
     return {
       id: Number(reserva.id),
@@ -239,6 +279,17 @@ export class ReservasService {
       estado: reserva.estado,
       fecha_reserva: reserva.fecha_reserva,
       notas: reserva.notas,
+      telefono_contacto: reserva.telefono_contacto,
+      // Precios
+      precio_unitario: reserva.precio_unitario ? Number(reserva.precio_unitario) : null,
+      precio_total: reserva.precio_total ? Number(reserva.precio_total) : null,
+      // Tracking de estados
+      fecha_confirmacion: reserva.fecha_confirmacion,
+      confirmado_por: reserva.confirmado_por,
+      fecha_cancelacion: reserva.fecha_cancelacion,
+      cancelado_por: reserva.cancelado_por,
+      motivo_cancelacion: reserva.motivo_cancelacion,
+      // Auditoría
       created_at: reserva.created_at,
       updated_at: reserva.updated_at,
       is_active: reserva.is_active,
@@ -252,6 +303,7 @@ export class ReservasService {
           descripcion: reserva.variante.producto.descripcion,
           genero: reserva.variante.producto.genero,
           thumbnail: reserva.variante.producto.thumbnail,
+          precio: reserva.variante.producto.precio ? Number(reserva.variante.producto.precio) : null,
         } : null,
         talle: reserva.variante.talle ? {
           id: Number(reserva.variante.talle.id),

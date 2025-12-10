@@ -54,4 +54,12 @@ export class CreateProductoDto {
   @IsString({ message: 'La URL debe ser una cadena de texto' })
   @IsOptional()
   thumbnail?: string;
+
+  @ApiPropertyOptional({
+    description: 'Precio de venta del producto',
+    example: 15000.00,
+    type: 'number',
+  })
+  @IsOptional()
+  precio?: number;
 }

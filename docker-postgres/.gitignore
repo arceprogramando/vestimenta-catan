@@ -23,5 +23,4 @@ logs/
 # OS generated files
 .DS_Store
 Thumbs.db
-!VestimentaCatan16_8.sql
-!backup_final_soft_delete_complete.sql
+!backups/backup_completo.sql

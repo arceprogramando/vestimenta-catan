@@ -2,7 +2,15 @@ import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api';
 
-// Crear instancia de axios
+// Cliente público - para endpoints que no requieren autenticación
+export const publicApi = axios.create({
+  baseURL: API_URL,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
+
+// Cliente autenticado - para endpoints que requieren auth
 export const api = axios.create({
   baseURL: API_URL,
   withCredentials: true, // Importante para enviar cookies (refresh token)

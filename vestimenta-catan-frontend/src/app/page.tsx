@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { ShoppingBag, Loader2 } from 'lucide-react';
 import { ProductCard } from '@/components/product-card';
 import { Producto } from '@/types/producto';
+import { publicApi } from '@/lib/axios';
 
 export default function Home() {
   const [productos, setProductos] = useState<Producto[]>([]);
@@ -17,16 +18,8 @@ export default function Home() {
     const fetchProductos = async () => {
       try {
         setLoading(true);
-        const response = await fetch(
-          'http://localhost:3000/api/productos/stock-resumen'
-        );
-
-        if (!response.ok) {
-          throw new Error(`Error: ${response.status} ${response.statusText}`);
-        }
-
-        const data = await response.json();
-        setProductos(data);
+        const response = await publicApi.get('/productos/stock-resumen');
+        setProductos(response.data);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Error desconocido');
         console.error('Error fetching productos:', err);

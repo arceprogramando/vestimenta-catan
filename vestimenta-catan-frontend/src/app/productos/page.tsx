@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,7 +8,8 @@ import { Loader2, Search } from 'lucide-react';
 import { ProductCard } from '@/components/product-card';
 import { Producto } from '@/types/producto';
 
-export default function ProductosPage() {
+// Componente interno que usa useSearchParams
+function ProductosContent() {
   const searchParams = useSearchParams();
   const generoFilter = searchParams.get('genero');
 
@@ -128,5 +129,24 @@ export default function ProductosPage() {
         </>
       )}
     </div>
+  );
+}
+
+// Componente principal con Suspense boundary
+export default function ProductosPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="container mx-auto px-4 py-8">
+          <h1 className="text-3xl font-bold mb-8">Productos</h1>
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <span className="ml-2">Cargando...</span>
+          </div>
+        </div>
+      }
+    >
+      <ProductosContent />
+    </Suspense>
   );
 }

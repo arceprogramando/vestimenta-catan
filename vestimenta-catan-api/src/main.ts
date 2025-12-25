@@ -1,6 +1,8 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe, RequestMethod } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import helmet from 'helmet';
+import compression from 'compression';
 import cookieParser from 'cookie-parser';
 import { AppModule } from './app.module';
 
@@ -8,6 +10,27 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
   const apiPrefix = process.env.API_PREFIX || 'api';
+  const isProduction = process.env.NODE_ENV === 'production';
+
+  // Security headers with Helmet
+  app.use(
+    helmet({
+      contentSecurityPolicy: isProduction
+        ? {
+            directives: {
+              defaultSrc: ["'self'"],
+              styleSrc: ["'self'", "'unsafe-inline'"],
+              scriptSrc: ["'self'"],
+              imgSrc: ["'self'", 'data:', 'https:'],
+            },
+          }
+        : false, // Disable CSP in development for Swagger
+      crossOriginEmbedderPolicy: false, // Required for Swagger UI
+    }),
+  );
+
+  // Compression for responses
+  app.use(compression());
 
   // Middleware para parsear cookies
   app.use(cookieParser());

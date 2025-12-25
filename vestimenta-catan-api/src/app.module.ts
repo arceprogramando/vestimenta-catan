@@ -1,13 +1,15 @@
-import { Module } from '@nestjs/common';
+import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { WinstonModule } from 'nest-winston';
 import { AppController, ApiController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
 import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
 import { RolesGuard } from './auth/guards/roles.guard';
 import { ColoresModule } from './colores/colores.module';
+import { winstonConfig, HttpLoggerMiddleware } from './common/logger';
 import { PrismaModule } from './prisma/prisma.module';
 import { ProductoVariantesModule } from './producto-variantes/producto-variantes.module';
 import { ProductosModule } from './productos/productos.module';
@@ -20,6 +22,8 @@ import { UsuariosModule } from './usuarios/usuarios.module';
     ConfigModule.forRoot({
       isGlobal: true,
     }),
+    // Winston Logger
+    WinstonModule.forRoot(winstonConfig),
     // Rate limiting global: 100 requests por minuto por IP
     ThrottlerModule.forRoot([
       {
@@ -54,4 +58,8 @@ import { UsuariosModule } from './usuarios/usuarios.module';
     },
   ],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer.apply(HttpLoggerMiddleware).forRoutes('*');
+  }
+}

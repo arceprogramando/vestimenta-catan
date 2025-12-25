@@ -1,8 +1,12 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PassportStrategy } from '@nestjs/passport';
-import { Request } from 'express';
 import { ExtractJwt, Strategy } from 'passport-jwt';
+
+interface RequestWithCookies {
+  cookies?: { refreshToken?: string };
+  headers: { authorization?: string };
+}
 
 /**
  * Payload del JWT Refresh Token
@@ -35,7 +39,7 @@ export class JwtRefreshStrategy extends PassportStrategy(
     super({
       jwtFromRequest: ExtractJwt.fromExtractors([
         // Primero intentar extraer de cookie
-        (request: Request) => {
+        (request: RequestWithCookies): string | null => {
           const token = request?.cookies?.refreshToken;
           if (token) {
             return token;
@@ -56,7 +60,7 @@ export class JwtRefreshStrategy extends PassportStrategy(
    * Validar el refresh token y retornar el payload junto con el token
    */
   validate(
-    request: Request,
+    request: RequestWithCookies,
     payload: RefreshTokenPayload,
   ): { payload: RefreshTokenPayload; refreshToken: string } {
     if (!payload.sub || !payload.email) {
@@ -65,7 +69,7 @@ export class JwtRefreshStrategy extends PassportStrategy(
 
     // Obtener el refresh token para validación adicional
     const refreshToken =
-      request?.cookies?.refreshToken ||
+      request?.cookies?.refreshToken ??
       request.headers.authorization?.replace('Bearer ', '');
 
     if (!refreshToken) {

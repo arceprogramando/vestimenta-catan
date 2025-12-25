@@ -46,7 +46,10 @@ export class UsuariosService {
     }
 
     // Hash de la contraseña
-    const saltRounds = parseInt(this.configService.get<string>('BCRYPT_SALT_ROUNDS', '12'), 10);
+    const saltRounds = parseInt(
+      this.configService.get<string>('BCRYPT_SALT_ROUNDS', '12'),
+      10,
+    );
     const passwordHash = await bcrypt.hash(password, saltRounds);
 
     // Crear usuario
@@ -262,10 +265,18 @@ export class UsuariosService {
     provider?: string;
     avatar_url?: string | null;
   }): SanitizedUser {
-    const { password_hash, google_id, ...rest } = usuario;
     return {
-      ...rest,
-      id: Number(rest.id),
+      id: Number(usuario.id),
+      email: usuario.email,
+      nombre: usuario.nombre,
+      apellido: usuario.apellido,
+      rol: usuario.rol,
+      is_active: usuario.is_active,
+      created_at: usuario.created_at,
+      updated_at: usuario.updated_at,
+      deleted_at: usuario.deleted_at,
+      provider: usuario.provider,
+      avatar_url: usuario.avatar_url,
     };
   }
 }

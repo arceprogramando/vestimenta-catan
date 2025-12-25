@@ -19,12 +19,25 @@ import {
   ApiTooManyRequestsResponse,
 } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
-import type { Request, Response } from 'express';
+import type { Response } from 'express';
+
+interface RequestWithCookies {
+  cookies?: { refreshToken?: string };
+  headers: { 'user-agent'?: string; 'x-forwarded-for'?: string };
+  ip?: string;
+  user?: { payload: { sub: number }; refreshToken: string };
+}
 import { AuthService } from './auth.service';
 import { CurrentUser } from './decorators/current-user.decorator';
 import type { RequestUser } from './decorators/current-user.decorator';
 import { Public } from './decorators/public.decorator';
-import { AuthResponseDto, GoogleAuthDto, LoginDto, MessageResponseDto, RegisterDto } from './dto';
+import {
+  AuthResponseDto,
+  GoogleAuthDto,
+  LoginDto,
+  MessageResponseDto,
+  RegisterDto,
+} from './dto';
 
 @ApiTags('Autenticación')
 @Controller('auth')
@@ -42,7 +55,9 @@ export class AuthController {
     type: AuthResponseDto,
   })
   @ApiResponse({ status: 409, description: 'El email ya está registrado' })
-  @ApiTooManyRequestsResponse({ description: 'Demasiados intentos, espere un momento' })
+  @ApiTooManyRequestsResponse({
+    description: 'Demasiados intentos, espere un momento',
+  })
   async register(
     @Body() registerDto: RegisterDto,
     @Res({ passthrough: true }) res: Response,
@@ -53,9 +68,12 @@ export class AuthController {
     this.setRefreshTokenCookie(res, result.refreshToken);
 
     // No enviar el refresh token en el body
-    const { refreshToken, ...responseData } = result;
-
-    return responseData;
+    return {
+      accessToken: result.accessToken,
+      expiresIn: result.expiresIn,
+      tokenType: result.tokenType,
+      user: result.user,
+    };
   }
 
   @Public()
@@ -70,15 +88,17 @@ export class AuthController {
     type: AuthResponseDto,
   })
   @ApiResponse({ status: 401, description: 'Credenciales inválidas' })
-  @ApiTooManyRequestsResponse({ description: 'Demasiados intentos de login, espere un momento' })
+  @ApiTooManyRequestsResponse({
+    description: 'Demasiados intentos de login, espere un momento',
+  })
   async login(
     @Body() loginDto: LoginDto,
-    @Req() req: Request,
+    @Req() req: RequestWithCookies,
     @Res({ passthrough: true }) res: Response,
   ) {
     const userAgent = req.headers['user-agent'];
     const ipAddress =
-      req.ip || req.headers['x-forwarded-for']?.toString() || 'unknown';
+      req.ip ?? req.headers['x-forwarded-for']?.toString() ?? 'unknown';
 
     const result = await this.authService.login(loginDto, userAgent, ipAddress);
 
@@ -86,9 +106,12 @@ export class AuthController {
     this.setRefreshTokenCookie(res, result.refreshToken);
 
     // No enviar el refresh token en el body
-    const { refreshToken, ...responseData } = result;
-
-    return responseData;
+    return {
+      accessToken: result.accessToken,
+      expiresIn: result.expiresIn,
+      tokenType: result.tokenType,
+      user: result.user,
+    };
   }
 
   @Public()
@@ -104,12 +127,12 @@ export class AuthController {
   @ApiResponse({ status: 401, description: 'Token de Google invalido' })
   async googleLogin(
     @Body() googleAuthDto: GoogleAuthDto,
-    @Req() req: Request,
+    @Req() req: RequestWithCookies,
     @Res({ passthrough: true }) res: Response,
   ) {
     const userAgent = req.headers['user-agent'];
     const ipAddress =
-      req.ip || req.headers['x-forwarded-for']?.toString() || 'unknown';
+      req.ip ?? req.headers['x-forwarded-for']?.toString() ?? 'unknown';
 
     const result = await this.authService.googleLogin(
       googleAuthDto.credential,
@@ -121,9 +144,12 @@ export class AuthController {
     this.setRefreshTokenCookie(res, result.refreshToken);
 
     // No enviar el refresh token en el body
-    const { refreshToken, ...responseData } = result;
-
-    return responseData;
+    return {
+      accessToken: result.accessToken,
+      expiresIn: result.expiresIn,
+      tokenType: result.tokenType,
+      user: result.user,
+    };
   }
 
   @Public()
@@ -136,15 +162,18 @@ export class AuthController {
     description: 'Tokens refrescados exitosamente',
     type: AuthResponseDto,
   })
-  @ApiResponse({ status: 401, description: 'Refresh token inválido o expirado' })
+  @ApiResponse({
+    status: 401,
+    description: 'Refresh token inválido o expirado',
+  })
   async refreshTokens(
-    @Req() req: Request,
+    @Req() req: RequestWithCookies,
     @Res({ passthrough: true }) res: Response,
   ) {
     const user = req.user as { payload: { sub: number }; refreshToken: string };
     const userAgent = req.headers['user-agent'];
     const ipAddress =
-      req.ip || req.headers['x-forwarded-for']?.toString() || 'unknown';
+      req.ip ?? req.headers['x-forwarded-for']?.toString() ?? 'unknown';
 
     const result = await this.authService.refreshTokens(
       user.payload.sub,
@@ -157,9 +186,12 @@ export class AuthController {
     this.setRefreshTokenCookie(res, result.refreshToken);
 
     // No enviar el refresh token en el body
-    const { refreshToken, ...responseData } = result;
-
-    return responseData;
+    return {
+      accessToken: result.accessToken,
+      expiresIn: result.expiresIn,
+      tokenType: result.tokenType,
+      user: result.user,
+    };
   }
 
   @Post('logout')
@@ -173,10 +205,10 @@ export class AuthController {
   })
   async logout(
     @CurrentUser() user: RequestUser,
-    @Req() req: Request,
+    @Req() req: RequestWithCookies,
     @Res({ passthrough: true }) res: Response,
   ) {
-    const refreshToken = req.cookies?.refreshToken || '';
+    const refreshToken = req.cookies?.refreshToken ?? '';
 
     if (refreshToken) {
       await this.authService.logout(user.userId, refreshToken);

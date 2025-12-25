@@ -84,8 +84,13 @@ export class UsuariosController {
     @CurrentUser() user: RequestUser,
     @Body() updateUsuarioDto: UpdateUsuarioDto,
   ) {
-    // El usuario no puede cambiar su propio rol
-    const { rol, ...allowedUpdates } = updateUsuarioDto;
+    // El usuario no puede cambiar su propio rol - omitimos rol del update
+    const allowedUpdates: Omit<UpdateUsuarioDto, 'rol'> = {
+      nombre: updateUsuarioDto.nombre,
+      apellido: updateUsuarioDto.apellido,
+      email: updateUsuarioDto.email,
+      password: updateUsuarioDto.password,
+    };
     return this.usuariosService.update(user.userId, allowedUpdates);
   }
 
@@ -94,14 +99,20 @@ export class UsuariosController {
   @ApiOperation({ summary: 'Actualizar usuario por ID (solo admin)' })
   @ApiResponse({ status: 200, description: 'Usuario actualizado' })
   @ApiResponse({ status: 404, description: 'Usuario no encontrado' })
-  @ApiResponse({ status: 403, description: 'No puede asignar un rol igual o superior al suyo' })
+  @ApiResponse({
+    status: 403,
+    description: 'No puede asignar un rol igual o superior al suyo',
+  })
   async update(
     @Param('id', ParseIntPipe) id: number,
     @Body() updateUsuarioDto: UpdateUsuarioDto,
     @CurrentUser() currentUser: RequestUser,
   ) {
     // Validar que el usuario solo pueda asignar roles de menor nivel
-    if (updateUsuarioDto.rol && !canManageRole(currentUser.rol, updateUsuarioDto.rol)) {
+    if (
+      updateUsuarioDto.rol &&
+      !canManageRole(currentUser.rol, updateUsuarioDto.rol)
+    ) {
       throw new ForbiddenException(
         'No puede asignar un rol igual o superior al suyo',
       );

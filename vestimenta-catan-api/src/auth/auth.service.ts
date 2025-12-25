@@ -5,7 +5,6 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
-import * as bcrypt from 'bcrypt';
 import { OAuth2Client } from 'google-auth-library';
 import { PrismaService } from '../prisma/prisma.service';
 import { UsuariosService, SanitizedUser } from '../usuarios/usuarios.service';
@@ -107,15 +106,21 @@ export class AuthService {
       ipAddress,
     );
 
-    // Sanitizar usuario para respuesta
-    const { password_hash, ...sanitizedUser } = user;
-
     return {
       ...tokens,
       tokenType: 'Bearer',
       user: {
-        ...sanitizedUser,
-        id: Number(sanitizedUser.id),
+        id: Number(user.id),
+        email: user.email,
+        nombre: user.nombre,
+        apellido: user.apellido,
+        rol: user.rol,
+        rol_id: user.rol_id,
+        provider: user.provider,
+        avatar_url: user.avatar_url,
+        is_active: user.is_active,
+        created_at: user.created_at,
+        updated_at: user.updated_at,
       },
     };
   }
@@ -123,7 +128,11 @@ export class AuthService {
   /**
    * Login con Google OAuth
    */
-  async googleLogin(credential: string, userAgent?: string, ipAddress?: string) {
+  async googleLogin(
+    credential: string,
+    userAgent?: string,
+    ipAddress?: string,
+  ) {
     // 1. Verificar el token de Google
     const payload = await this.verifyGoogleToken(credential);
 
@@ -132,11 +141,15 @@ export class AuthService {
     }
 
     // 2. Buscar usuario por google_id
-    let user: SanitizedUser | null = await this.usuariosService.findByGoogleId(payload.sub);
+    let user: SanitizedUser | null = await this.usuariosService.findByGoogleId(
+      payload.sub,
+    );
 
     if (!user) {
       // 3. Buscar por email
-      const existingUser = await this.usuariosService.findByEmail(payload.email);
+      const existingUser = await this.usuariosService.findByEmail(
+        payload.email,
+      );
 
       if (existingUser) {
         // Vincular cuenta existente con Google
@@ -158,7 +171,9 @@ export class AuthService {
     }
 
     if (!user) {
-      throw new UnauthorizedException('No se pudo crear o encontrar el usuario');
+      throw new UnauthorizedException(
+        'No se pudo crear o encontrar el usuario',
+      );
     }
 
     // 4. Generar tokens JWT
@@ -248,15 +263,22 @@ export class AuthService {
       ipAddress,
     );
 
-    // Sanitizar usuario
-    const { password_hash, ...sanitizedUser } = storedToken.usuario;
-
+    const usuario = storedToken.usuario;
     return {
       ...tokens,
       tokenType: 'Bearer',
       user: {
-        ...sanitizedUser,
-        id: Number(sanitizedUser.id),
+        id: Number(usuario.id),
+        email: usuario.email,
+        nombre: usuario.nombre,
+        apellido: usuario.apellido,
+        rol: usuario.rol,
+        rol_id: usuario.rol_id,
+        provider: usuario.provider,
+        avatar_url: usuario.avatar_url,
+        is_active: usuario.is_active,
+        created_at: usuario.created_at,
+        updated_at: usuario.updated_at,
       },
     };
   }

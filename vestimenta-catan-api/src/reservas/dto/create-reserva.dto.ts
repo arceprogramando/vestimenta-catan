@@ -1,10 +1,4 @@
-import {
-  IsInt,
-  IsOptional,
-  IsString,
-  Min,
-  IsEnum,
-} from 'class-validator';
+import { IsInt, IsOptional, IsString, Min, IsEnum } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 enum EstadoReserva {
@@ -52,7 +46,8 @@ export class CreateReservaDto {
     type: 'string',
   })
   @IsEnum(EstadoReserva, {
-    message: 'El estado debe ser: pendiente, confirmado, cancelado o completado',
+    message:
+      'El estado debe ser: pendiente, confirmado, cancelado o completado',
   })
   @IsString({ message: 'El estado debe ser una cadena de texto' })
   @IsOptional()

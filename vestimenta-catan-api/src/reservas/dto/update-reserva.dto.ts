@@ -5,7 +5,8 @@ import { ApiPropertyOptional } from '@nestjs/swagger';
 
 export class UpdateReservaDto extends PartialType(CreateReservaDto) {
   @ApiPropertyOptional({
-    description: 'Motivo de cancelación (requerido si el estado cambia a cancelado)',
+    description:
+      'Motivo de cancelación (requerido si el estado cambia a cancelado)',
     example: 'El cliente solicitó cancelar el pedido',
     type: 'string',
   })

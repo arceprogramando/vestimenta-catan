@@ -1,9 +1,4 @@
-import {
-  IsString,
-  IsNotEmpty,
-  IsEnum,
-  IsOptional,
-} from 'class-validator';
+import { IsString, IsNotEmpty, IsEnum, IsOptional } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 enum Genero {
@@ -57,7 +52,7 @@ export class CreateProductoDto {
 
   @ApiPropertyOptional({
     description: 'Precio de venta del producto',
-    example: 15000.00,
+    example: 15000.0,
     type: 'number',
   })
   @IsOptional()

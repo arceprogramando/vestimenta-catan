@@ -22,7 +22,6 @@ import {
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { RequestUser } from '../auth/decorators/current-user.decorator';
 import { Roles } from '../auth/decorators/roles.decorator';
-import { Public } from '../auth/decorators/public.decorator';
 import { ReservasService } from './reservas.service';
 import type { SoftDeleteDto } from './reservas.service';
 import { CreateReservaDto } from './dto/create-reserva.dto';
@@ -38,7 +37,10 @@ export class ReservasController {
   @ApiOperation({ summary: 'Crear una nueva reserva (usuario autenticado)' })
   @ApiBody({ type: CreateReservaDto })
   @ApiResponse({ status: 201, description: 'Reserva creada exitosamente.' })
-  @ApiResponse({ status: 400, description: 'Datos inválidos o stock insuficiente.' })
+  @ApiResponse({
+    status: 400,
+    description: 'Datos inválidos o stock insuficiente.',
+  })
   @ApiResponse({ status: 401, description: 'No autenticado.' })
   @ApiResponse({ status: 404, description: 'Variante no encontrada.' })
   create(

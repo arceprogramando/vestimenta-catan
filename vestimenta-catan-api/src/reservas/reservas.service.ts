@@ -1,13 +1,88 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateReservaDto } from './dto/create-reserva.dto';
 import { UpdateReservaDto } from './dto/update-reserva.dto';
-import { Prisma } from '@prisma/client';
+import { estado_reserva } from '@prisma/client';
 
 // DTO para eliminación lógica
 export interface SoftDeleteDto {
   deleted_by?: string;
   delete_reason?: string;
+}
+
+// Tipo para valores Decimal de Prisma (tiene método toNumber)
+interface DecimalLike {
+  toNumber(): number;
+  toString(): string;
+}
+
+// Interface para datos de actualización de reserva
+interface ReservaUpdateData {
+  updated_at: Date;
+  variante_id?: bigint;
+  cantidad?: number;
+  precio_total?: number;
+  notas?: string | null;
+  telefono_contacto?: string | null;
+  estado?: estado_reserva;
+  fecha_confirmacion?: Date;
+  confirmado_por?: string;
+  fecha_cancelacion?: Date;
+  cancelado_por?: string;
+  motivo_cancelacion?: string;
+}
+
+// Interface para la reserva con relaciones
+interface ReservaWithRelations {
+  id: bigint;
+  variante_id: bigint;
+  usuario_id: bigint | null;
+  cantidad: number;
+  estado: estado_reserva;
+  fecha_reserva: Date;
+  notas: string | null;
+  telefono_contacto: string | null;
+  precio_unitario: DecimalLike | null;
+  precio_total: DecimalLike | null;
+  fecha_confirmacion: Date | null;
+  confirmado_por: string | null;
+  fecha_cancelacion: Date | null;
+  cancelado_por: string | null;
+  motivo_cancelacion: string | null;
+  created_at: Date;
+  updated_at: Date;
+  is_active: boolean;
+  variante?: {
+    id: bigint;
+    cantidad: number;
+    producto?: {
+      id: number;
+      nombre: string;
+      descripcion: string | null;
+      genero: string;
+      thumbnail: string | null;
+      precio: DecimalLike | null;
+    } | null;
+    talle?: {
+      id: bigint;
+      nombre: string;
+      orden: number | null;
+    } | null;
+    color?: {
+      id: bigint;
+      nombre: string;
+    } | null;
+  } | null;
+  usuario?: {
+    id: bigint;
+    email: string;
+    nombre: string | null;
+    apellido: string | null;
+  } | null;
 }
 
 @Injectable()
@@ -29,20 +104,22 @@ export class ReservasService {
     });
 
     if (!variante) {
-      throw new NotFoundException('Variante de producto no encontrada o inactiva');
+      throw new NotFoundException(
+        'Variante de producto no encontrada o inactiva',
+      );
     }
 
     // Verificar stock disponible
     if (variante.cantidad < createReservaDto.cantidad) {
       throw new BadRequestException(
-        `Stock insuficiente. Disponible: ${variante.cantidad}, solicitado: ${createReservaDto.cantidad}`
+        `Stock insuficiente. Disponible: ${variante.cantidad}, solicitado: ${createReservaDto.cantidad}`,
       );
     }
 
     // Obtener precio del producto y calcular total
-    const precioUnitario = variante.producto.precio;
+    const precioUnitario = variante.producto.precio as DecimalLike | null;
     const precioTotal = precioUnitario
-      ? new Prisma.Decimal(precioUnitario.toString()).mul(createReservaDto.cantidad)
+      ? precioUnitario.toNumber() * createReservaDto.cantidad
       : null;
 
     const reserva = await this.prisma.reservas.create({
@@ -52,7 +129,7 @@ export class ReservasService {
           ? BigInt(createReservaDto.usuario_id)
           : null,
         cantidad: createReservaDto.cantidad,
-        estado: (createReservaDto.estado as any) || 'pendiente',
+        estado: (createReservaDto.estado as estado_reserva) || 'pendiente',
         notas: createReservaDto.notas,
         telefono_contacto: createReservaDto.telefono_contacto,
         precio_unitario: precioUnitario,
@@ -89,7 +166,7 @@ export class ReservasService {
       orderBy: { fecha_reserva: 'desc' },
     });
 
-    return reservas.map(reserva => this.serializeReserva(reserva));
+    return reservas.map((reserva) => this.serializeReserva(reserva));
   }
 
   async findByUsuario(usuarioId: number) {
@@ -110,7 +187,7 @@ export class ReservasService {
       orderBy: { fecha_reserva: 'desc' },
     });
 
-    return reservas.map(reserva => this.serializeReserva(reserva));
+    return reservas.map((reserva) => this.serializeReserva(reserva));
   }
 
   async findOne(id: number, includeDeleted = false) {
@@ -136,7 +213,11 @@ export class ReservasService {
     return this.serializeReserva(reserva);
   }
 
-  async update(id: number, updateReservaDto: UpdateReservaDto, updatedBy?: string) {
+  async update(
+    id: number,
+    updateReservaDto: UpdateReservaDto,
+    updatedBy?: string,
+  ) {
     // Verificar que la reserva existe y está activa
     const existing = await this.prisma.reservas.findUnique({
       where: { id: BigInt(id), is_active: true },
@@ -147,7 +228,7 @@ export class ReservasService {
     }
 
     // Preparar datos de actualización
-    const updateData: any = {
+    const updateData: ReservaUpdateData = {
       updated_at: new Date(),
     };
 
@@ -158,8 +239,8 @@ export class ReservasService {
       updateData.cantidad = updateReservaDto.cantidad;
       // Recalcular precio total si cambia la cantidad
       if (existing.precio_unitario) {
-        updateData.precio_total = new Prisma.Decimal(existing.precio_unitario.toString())
-          .mul(updateReservaDto.cantidad);
+        updateData.precio_total =
+          Number(existing.precio_unitario) * updateReservaDto.cantidad;
       }
     }
     if (updateReservaDto.notas !== undefined) {
@@ -170,8 +251,11 @@ export class ReservasService {
     }
 
     // Manejar cambios de estado
-    if (updateReservaDto.estado && updateReservaDto.estado !== existing.estado) {
-      updateData.estado = updateReservaDto.estado as any;
+    if (
+      updateReservaDto.estado &&
+      updateReservaDto.estado !== existing.estado
+    ) {
+      updateData.estado = updateReservaDto.estado as estado_reserva;
 
       // Si se confirma
       if (updateReservaDto.estado === 'confirmado') {
@@ -270,7 +354,7 @@ export class ReservasService {
   }
 
   // Helper para serializar BigInt y Decimal a tipos seguros para JSON
-  private serializeReserva(reserva: any) {
+  private serializeReserva(reserva: ReservaWithRelations) {
     return {
       id: Number(reserva.id),
       variante_id: Number(reserva.variante_id),
@@ -281,7 +365,9 @@ export class ReservasService {
       notas: reserva.notas,
       telefono_contacto: reserva.telefono_contacto,
       // Precios
-      precio_unitario: reserva.precio_unitario ? Number(reserva.precio_unitario) : null,
+      precio_unitario: reserva.precio_unitario
+        ? Number(reserva.precio_unitario)
+        : null,
       precio_total: reserva.precio_total ? Number(reserva.precio_total) : null,
       // Tracking de estados
       fecha_confirmacion: reserva.fecha_confirmacion,
@@ -294,34 +380,46 @@ export class ReservasService {
       updated_at: reserva.updated_at,
       is_active: reserva.is_active,
       // Variante con producto, talle, color
-      variante: reserva.variante ? {
-        id: Number(reserva.variante.id),
-        cantidad: reserva.variante.cantidad,
-        producto: reserva.variante.producto ? {
-          id: reserva.variante.producto.id,
-          nombre: reserva.variante.producto.nombre,
-          descripcion: reserva.variante.producto.descripcion,
-          genero: reserva.variante.producto.genero,
-          thumbnail: reserva.variante.producto.thumbnail,
-          precio: reserva.variante.producto.precio ? Number(reserva.variante.producto.precio) : null,
-        } : null,
-        talle: reserva.variante.talle ? {
-          id: Number(reserva.variante.talle.id),
-          nombre: reserva.variante.talle.nombre,
-          orden: reserva.variante.talle.orden,
-        } : null,
-        color: reserva.variante.color ? {
-          id: Number(reserva.variante.color.id),
-          nombre: reserva.variante.color.nombre,
-        } : null,
-      } : null,
+      variante: reserva.variante
+        ? {
+            id: Number(reserva.variante.id),
+            cantidad: reserva.variante.cantidad,
+            producto: reserva.variante.producto
+              ? {
+                  id: reserva.variante.producto.id,
+                  nombre: reserva.variante.producto.nombre,
+                  descripcion: reserva.variante.producto.descripcion,
+                  genero: reserva.variante.producto.genero,
+                  thumbnail: reserva.variante.producto.thumbnail,
+                  precio: reserva.variante.producto.precio
+                    ? Number(reserva.variante.producto.precio)
+                    : null,
+                }
+              : null,
+            talle: reserva.variante.talle
+              ? {
+                  id: Number(reserva.variante.talle.id),
+                  nombre: reserva.variante.talle.nombre,
+                  orden: reserva.variante.talle.orden,
+                }
+              : null,
+            color: reserva.variante.color
+              ? {
+                  id: Number(reserva.variante.color.id),
+                  nombre: reserva.variante.color.nombre,
+                }
+              : null,
+          }
+        : null,
       // Usuario
-      usuario: reserva.usuario ? {
-        id: Number(reserva.usuario.id),
-        email: reserva.usuario.email,
-        nombre: reserva.usuario.nombre,
-        apellido: reserva.usuario.apellido,
-      } : null,
+      usuario: reserva.usuario
+        ? {
+            id: Number(reserva.usuario.id),
+            email: reserva.usuario.email,
+            nombre: reserva.usuario.nombre,
+            apellido: reserva.usuario.apellido,
+          }
+        : null,
     };
   }
 }

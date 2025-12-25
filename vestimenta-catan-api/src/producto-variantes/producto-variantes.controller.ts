@@ -33,7 +33,9 @@ export class ProductoVariantesController {
 
   @Post()
   @Roles('admin')
-  @ApiOperation({ summary: 'Crear una nueva variante de producto (solo admin)' })
+  @ApiOperation({
+    summary: 'Crear una nueva variante de producto (solo admin)',
+  })
   @ApiBody({ type: CreateProductoVarianteDto })
   @ApiResponse({
     status: 201,

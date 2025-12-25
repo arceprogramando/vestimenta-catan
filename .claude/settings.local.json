@@ -8,7 +8,9 @@
       "Bash(findstr:*)",
       "Bash(taskkill:*)",
       "Bash(timeout:*)",
-      "Bash(powershell -Command:*)"
+      "Bash(powershell -Command:*)",
+      "Bash(mkdir:*)",
+      "Bash(pnpm run build:*)"
     ]
   }
 }

@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateProductoVarianteDto } from './dto/create-producto-variante.dto';
 import { UpdateProductoVarianteDto } from './dto/update-producto-variante.dto';
@@ -7,6 +11,34 @@ import { UpdateProductoVarianteDto } from './dto/update-producto-variante.dto';
 export interface SoftDeleteDto {
   deleted_by?: string;
   delete_reason?: string;
+}
+
+// Interface para la variante con relaciones
+interface VarianteWithRelations {
+  id: bigint;
+  producto_id: number;
+  color_id: bigint;
+  talle_id: bigint | null;
+  cantidad: number;
+  is_active: boolean;
+  created_at: Date;
+  updated_at: Date;
+  producto?: {
+    id: number;
+    nombre: string;
+    descripcion: string | null;
+    genero: string;
+    thumbnail: string | null;
+  } | null;
+  color?: {
+    id: bigint;
+    nombre: string;
+  } | null;
+  talle?: {
+    id: bigint;
+    nombre: string;
+    orden: number | null;
+  } | null;
 }
 
 @Injectable()
@@ -44,7 +76,7 @@ export class ProductoVariantesService {
       orderBy: { created_at: 'desc' },
     });
 
-    return variantes.map(variante => this.serializeVariante(variante));
+    return variantes.map((variante) => this.serializeVariante(variante));
   }
 
   async findByProducto(productoId: number) {
@@ -57,13 +89,10 @@ export class ProductoVariantesService {
         color: true,
         talle: true,
       },
-      orderBy: [
-        { talle: { orden: 'asc' } },
-        { color: { nombre: 'asc' } },
-      ],
+      orderBy: [{ talle: { orden: 'asc' } }, { color: { nombre: 'asc' } }],
     });
 
-    return variantes.map(variante => this.serializeVariante(variante));
+    return variantes.map((variante) => this.serializeVariante(variante));
   }
 
   async findOne(id: number, includeDeleted = false) {
@@ -84,7 +113,10 @@ export class ProductoVariantesService {
     return this.serializeVariante(variante);
   }
 
-  async update(id: number, updateProductoVarianteDto: UpdateProductoVarianteDto) {
+  async update(
+    id: number,
+    updateProductoVarianteDto: UpdateProductoVarianteDto,
+  ) {
     const existing = await this.findOne(id);
     if (!existing) {
       throw new NotFoundException('Variante no encontrada o fue eliminada');
@@ -94,18 +126,18 @@ export class ProductoVariantesService {
       where: { id: BigInt(id) },
       data: {
         ...(updateProductoVarianteDto.producto_id && {
-          producto_id: updateProductoVarianteDto.producto_id
+          producto_id: updateProductoVarianteDto.producto_id,
         }),
         ...(updateProductoVarianteDto.talle_id !== undefined && {
           talle_id: updateProductoVarianteDto.talle_id
             ? BigInt(updateProductoVarianteDto.talle_id)
-            : null
+            : null,
         }),
         ...(updateProductoVarianteDto.color_id && {
-          color_id: BigInt(updateProductoVarianteDto.color_id)
+          color_id: BigInt(updateProductoVarianteDto.color_id),
         }),
         ...(updateProductoVarianteDto.cantidad !== undefined && {
-          cantidad: updateProductoVarianteDto.cantidad
+          cantidad: updateProductoVarianteDto.cantidad,
         }),
         updated_at: new Date(),
       },
@@ -202,7 +234,7 @@ export class ProductoVariantesService {
   }
 
   // Helper para serializar BigInt a Number
-  private serializeVariante(variante: any) {
+  private serializeVariante(variante: VarianteWithRelations) {
     return {
       id: Number(variante.id),
       producto_id: variante.producto_id,
@@ -212,16 +244,20 @@ export class ProductoVariantesService {
       is_active: variante.is_active,
       created_at: variante.created_at,
       updated_at: variante.updated_at,
-      producto: variante.producto || null,
-      color: variante.color ? {
-        id: Number(variante.color.id),
-        nombre: variante.color.nombre,
-      } : null,
-      talle: variante.talle ? {
-        id: Number(variante.talle.id),
-        nombre: variante.talle.nombre,
-        orden: variante.talle.orden,
-      } : null,
+      producto: variante.producto ?? null,
+      color: variante.color
+        ? {
+            id: Number(variante.color.id),
+            nombre: variante.color.nombre,
+          }
+        : null,
+      talle: variante.talle
+        ? {
+            id: Number(variante.talle.id),
+            nombre: variante.talle.nombre,
+            orden: variante.talle.orden,
+          }
+        : null,
     };
   }
 }

@@ -83,10 +83,7 @@ export class ProductosService {
             color: true,
             talle: true,
           },
-          orderBy: [
-            { talle: { orden: 'asc' } },
-            { color: { nombre: 'asc' } },
-          ],
+          orderBy: [{ talle: { orden: 'asc' } }, { color: { nombre: 'asc' } }],
         },
       },
     });
@@ -96,7 +93,7 @@ export class ProductosService {
     // Serializar BigInt a Number
     return {
       ...producto,
-      producto_variantes: producto.producto_variantes.map(v => ({
+      producto_variantes: producto.producto_variantes.map((v) => ({
         ...v,
         id: Number(v.id),
         color_id: Number(v.color_id),
@@ -169,7 +166,7 @@ export class ProductosService {
       if (varianteIds.length > 0) {
         await tx.reservas.updateMany({
           where: {
-            variante_id: { in: varianteIds.map(v => v.id) },
+            variante_id: { in: varianteIds.map((v) => v.id) },
             is_active: true,
           },
           data: {

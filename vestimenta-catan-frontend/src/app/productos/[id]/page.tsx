@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Loader2, ArrowLeft, ShoppingCart, Package } from 'lucide-react';
 import { ReservaModal } from '@/components/reservas/ReservaModal';
+import { ProductImage } from '@/components/product-image';
 
 interface Variante {
   id: number;
@@ -156,13 +157,12 @@ export default function ProductoDetallePage() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Imagen */}
         <div className="aspect-square relative bg-muted rounded-lg overflow-hidden">
-          <img
+          <ProductImage
             src={producto.thumbnail}
             alt={producto.nombre}
-            className="w-full h-full object-cover"
-            onError={(e) => {
-              e.currentTarget.src = '/images/products/remera-termica-hombre-1.jpeg';
-            }}
+            fill
+            className="object-cover"
+            priority
           />
         </div>
 

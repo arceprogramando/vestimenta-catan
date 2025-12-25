@@ -378,22 +378,30 @@ describe('AuthService', () => {
 
     it('should parse "15m" as 900 seconds', () => {
       // Acceder a método privado (no recomendado pero útil para tests)
-      const result = (service as unknown as { parseExpiresIn: (s: string) => number }).parseExpiresIn('15m');
+      const result = (
+        service as unknown as { parseExpiresIn: (s: string) => number }
+      ).parseExpiresIn('15m');
       expect(result).toBe(900); // 15 * 60
     });
 
     it('should parse "7d" as 604800 seconds', () => {
-      const result = (service as unknown as { parseExpiresIn: (s: string) => number }).parseExpiresIn('7d');
+      const result = (
+        service as unknown as { parseExpiresIn: (s: string) => number }
+      ).parseExpiresIn('7d');
       expect(result).toBe(604800); // 7 * 24 * 60 * 60
     });
 
     it('should parse "1h" as 3600 seconds', () => {
-      const result = (service as unknown as { parseExpiresIn: (s: string) => number }).parseExpiresIn('1h');
+      const result = (
+        service as unknown as { parseExpiresIn: (s: string) => number }
+      ).parseExpiresIn('1h');
       expect(result).toBe(3600); // 1 * 60 * 60
     });
 
     it('should return 900 for invalid format', () => {
-      const result = (service as unknown as { parseExpiresIn: (s: string) => number }).parseExpiresIn('invalid');
+      const result = (
+        service as unknown as { parseExpiresIn: (s: string) => number }
+      ).parseExpiresIn('invalid');
       expect(result).toBe(900); // Default
     });
   });

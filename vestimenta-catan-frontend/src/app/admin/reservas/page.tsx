@@ -37,6 +37,7 @@ import {
 import { useRequireAdmin } from '@/hooks/use-auth';
 import { useReservas } from '@/hooks/use-reservas';
 import { Comprobante } from '@/components/reservas/Comprobante';
+import { ProductImage } from '@/components/product-image';
 import type { Reserva, EstadoReserva } from '@/types/reserva';
 
 const estadoConfig: Record<EstadoReserva, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
@@ -344,17 +345,14 @@ export default function AdminReservasPage() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {/* Producto */}
                     <div className="flex gap-4">
-                      {producto?.thumbnail && (
-                        <img
-                          src={producto.thumbnail}
-                          alt={producto.nombre}
-                          className="w-20 h-20 object-cover rounded-md"
-                          onError={(e) => {
-                            e.currentTarget.src =
-                              '/images/products/remera-termica-hombre-1.jpeg';
-                          }}
+                      <div className="w-20 h-20 relative rounded-md overflow-hidden bg-muted shrink-0">
+                        <ProductImage
+                          src={producto?.thumbnail}
+                          alt={producto?.nombre || 'Producto'}
+                          fill
+                          className="object-cover"
                         />
-                      )}
+                      </div>
                       <div>
                         <h3 className="font-semibold">
                           {producto?.nombre || 'Producto'}

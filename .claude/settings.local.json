@@ -10,7 +10,9 @@
       "Bash(timeout:*)",
       "Bash(powershell -Command:*)",
       "Bash(mkdir:*)",
-      "Bash(pnpm run build:*)"
+      "Bash(pnpm run build:*)",
+      "Bash(xargs cat:*)",
+      "Bash(cat:*)"
     ]
   }
 }

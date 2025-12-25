@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Calendar, Package, ShoppingBag, Loader2, Phone, AlertCircle } from 'lucide-react';
 import { useRequireAuth } from '@/hooks/use-auth';
 import { useReservas } from '@/hooks/use-reservas';
+import { ProductImage } from '@/components/product-image';
 import type { EstadoReserva } from '@/types/reserva';
 
 const estadoConfig: Record<EstadoReserva, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
@@ -146,16 +147,14 @@ export default function MisReservasPage() {
                 </CardHeader>
                 <CardContent>
                   <div className="flex gap-4">
-                    {producto?.thumbnail && (
-                      <img
-                        src={producto.thumbnail}
-                        alt={producto.nombre}
-                        className="w-24 h-24 object-cover rounded-md"
-                        onError={(e) => {
-                          e.currentTarget.src = '/images/products/remera-termica-hombre-1.jpeg';
-                        }}
+                    <div className="w-24 h-24 relative rounded-md overflow-hidden bg-muted shrink-0">
+                      <ProductImage
+                        src={producto?.thumbnail}
+                        alt={producto?.nombre || 'Producto'}
+                        fill
+                        className="object-cover"
                       />
-                    )}
+                    </div>
                     <div className="flex-1">
                       <h3 className="font-semibold text-lg">{producto?.nombre || 'Producto'}</h3>
                       <div className="flex flex-wrap gap-2 mt-1">

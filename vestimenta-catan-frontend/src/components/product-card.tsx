@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { ProductImage } from '@/components/product-image';
 import { Producto } from '@/types/producto';
 
 interface ProductCardProps {
@@ -16,13 +17,11 @@ export function ProductCard({ producto }: ProductCardProps) {
   return (
     <Card className="overflow-hidden hover:shadow-lg transition-shadow h-full flex flex-col">
       <div className="aspect-square relative bg-muted overflow-hidden">
-        <img
+        <ProductImage
           src={producto.thumbnail}
           alt={producto.nombre}
-          className="absolute inset-0 w-full h-full object-cover"
-          onError={(e) => {
-            e.currentTarget.src = '/images/products/remera-termica-hombre-1.jpeg';
-          }}
+          fill
+          className="object-cover"
         />
       </div>
       <CardContent className="p-4 flex-1 flex flex-col">

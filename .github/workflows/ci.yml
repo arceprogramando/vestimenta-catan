@@ -1,0 +1,145 @@
+# ============================================
+# CI/CD Pipeline - Vestimenta Catán
+# ============================================
+# Este workflow corre en cada push y PR
+# Ejecuta: Tests → Lint → Build
+# ============================================
+
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  # ==========================================
+  # Job: Test & Build API
+  # ==========================================
+  api:
+    name: API - Test & Build
+    runs-on: ubuntu-latest
+
+    # Servicios (contenedores) que necesita el job
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: test_user
+          POSTGRES_PASSWORD: test_password
+          POSTGRES_DB: test_db
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    defaults:
+      run:
+        working-directory: vestimenta-catan-api
+
+    steps:
+      # 1. Checkout del código
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # 2. Setup Node.js
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      # 3. Setup pnpm
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      # 4. Cache de dependencias
+      - name: Get pnpm store directory
+        shell: bash
+        run: echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+
+      - name: Cache pnpm dependencies
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+
+      # 5. Instalar dependencias
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # 6. Generar Prisma Client
+      - name: Generate Prisma Client
+        run: npx prisma generate
+
+      # 7. Correr tests con coverage
+      - name: Run tests
+        run: pnpm run test:ci
+        env:
+          DATABASE_URL: postgresql://test_user:test_password@localhost:5432/test_db
+          JWT_ACCESS_SECRET: test-access-secret
+          JWT_REFRESH_SECRET: test-refresh-secret
+
+      # 8. Correr lint
+      - name: Run lint
+        run: pnpm run lint
+
+      # 9. Build
+      - name: Build
+        run: pnpm run build:only
+
+      # 10. Upload coverage (opcional)
+      - name: Upload coverage reports
+        uses: codecov/codecov-action@v4
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          directory: ./coverage
+          fail_ci_if_error: false
+
+  # ==========================================
+  # Job: Build Frontend
+  # ==========================================
+  frontend:
+    name: Frontend - Build
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: vestimenta-catan-frontend
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Cache npm dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run lint
+        run: npm run lint
+
+      - name: Build
+        run: npm run build
+        env:
+          NEXT_PUBLIC_API_URL: http://localhost:3000/api
+          NEXT_PUBLIC_GOOGLE_CLIENT_ID: test-client-id

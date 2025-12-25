@@ -1,0 +1,19 @@
+{
+  "name": "vestimenta-catan",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Monorepo for Vestimenta Catán - Inventory Management System",
+  "scripts": {
+    "prepare": "husky",
+    "test:api": "cd vestimenta-catan-api && pnpm run test",
+    "lint:api": "cd vestimenta-catan-api && pnpm run lint",
+    "build:api": "cd vestimenta-catan-api && pnpm run build",
+    "validate": "cd vestimenta-catan-api && pnpm run validate"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^20.2.0",
+    "@commitlint/config-conventional": "^20.2.0",
+    "husky": "^9.1.7"
+  }
+}

@@ -1,0 +1,4 @@
+# Valida que el mensaje de commit siga Conventional Commits
+# Si no cumple el formato, el commit se rechaza
+
+npx --no -- commitlint --edit $1

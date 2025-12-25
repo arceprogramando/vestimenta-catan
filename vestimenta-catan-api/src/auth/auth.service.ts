@@ -6,6 +6,7 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { OAuth2Client } from 'google-auth-library';
+import * as crypto from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import { UsuariosService, SanitizedUser } from '../usuarios/usuarios.service';
 import { LoginDto, RegisterDto } from './dto';
@@ -224,7 +225,7 @@ export class AuthService {
     ipAddress?: string,
   ) {
     // Verificar que el refresh token existe y no está revocado
-    const tokenHash = await this.hashToken(refreshToken);
+    const tokenHash = this.hashToken(refreshToken);
     const storedToken = await this.prisma.refresh_tokens.findFirst({
       where: {
         usuario_id: BigInt(userId),
@@ -287,7 +288,7 @@ export class AuthService {
    * Logout - revocar refresh token
    */
   async logout(userId: number, refreshToken: string) {
-    const tokenHash = await this.hashToken(refreshToken);
+    const tokenHash = this.hashToken(refreshToken);
 
     await this.prisma.refresh_tokens.updateMany({
       where: {
@@ -383,7 +384,7 @@ export class AuthService {
     userAgent?: string,
     ipAddress?: string,
   ) {
-    const tokenHash = await this.hashToken(refreshToken);
+    const tokenHash = this.hashToken(refreshToken);
     const expiresIn = this.configService.get<string>(
       'JWT_REFRESH_EXPIRES_IN',
       '7d',
@@ -406,9 +407,8 @@ export class AuthService {
   /**
    * Hash del token para almacenamiento seguro
    */
-  private async hashToken(token: string): Promise<string> {
+  private hashToken(token: string): string {
     // Usamos SHA256 para hash rápido (no bcrypt porque no necesitamos comparar)
-    const crypto = await import('crypto');
     return crypto.createHash('sha256').update(token).digest('hex');
   }
 

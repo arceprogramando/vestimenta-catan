@@ -95,15 +95,6 @@ jobs:
       - name: Build
         run: pnpm run build:only
 
-      # 10. Upload coverage (opcional)
-      - name: Upload coverage reports
-        uses: codecov/codecov-action@v4
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          directory: ./coverage
-          fail_ci_if_error: false
-
   # ==========================================
   # Job: Build Frontend
   # ==========================================

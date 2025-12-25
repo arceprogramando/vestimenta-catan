@@ -1,10 +1,12 @@
 # Pre-commit hook: Corre tests y lint antes de cada commit
 # Si fallan, el commit se cancela
 
+cd vestimenta-catan-api
+
 echo "🧪 Running tests..."
-cd vestimenta-catan-api && pnpm run test
+pnpm run test
 
 echo "🔍 Running lint..."
-cd vestimenta-catan-api && pnpm run lint
+pnpm run lint
 
 echo "✅ All checks passed!"

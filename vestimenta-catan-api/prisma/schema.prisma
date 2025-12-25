@@ -1,10 +1,10 @@
 generator client {
   provider = "prisma-client-js"
+  output   = "../node_modules/.prisma/client"
 }
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
 }
 
 // ============================================
@@ -17,9 +17,12 @@ enum genero {
   ninios
 }
 
+// Enum para compatibilidad, pero usamos tabla roles para descripción
 enum rol_usuario {
   user
+  empleado
   admin
+  superadmin
 }
 
 enum estado_reserva {
@@ -182,6 +185,26 @@ model reservas {
 }
 
 // ============================================
+// ROLES Y PERMISOS
+// ============================================
+
+model roles {
+  id          Int       @id @default(autoincrement())
+  codigo      String    @unique @db.VarChar(20)  // user, empleado, admin, superadmin
+  nombre      String    @db.VarChar(50)          // Nombre para mostrar
+  descripcion String    @db.Text                 // Descripción detallada de permisos
+  nivel       Int       @default(0)              // Jerarquía: mayor nivel = más permisos
+  is_active   Boolean   @default(true)
+  created_at  DateTime  @default(now()) @db.Timestamptz(6)
+  updated_at  DateTime  @default(now()) @db.Timestamptz(6)
+
+  // Relaciones
+  usuarios    usuarios[]
+
+  @@index([codigo], map: "ix_roles_codigo")
+}
+
+// ============================================
 // AUTENTICACIÓN Y USUARIOS
 // ============================================
 
@@ -191,7 +214,8 @@ model usuarios {
   password_hash  String?      @db.VarChar(255)  // Nullable para Google OAuth
   nombre         String?      @db.VarChar(100)
   apellido       String?      @db.VarChar(100)
-  rol            rol_usuario  @default(user)
+  rol            rol_usuario  @default(user)    // Mantenemos enum para compatibilidad
+  rol_id         Int?                            // FK a tabla roles (nuevo)
 
   // Google OAuth
   google_id      String?      @unique @db.VarChar(255)
@@ -209,12 +233,14 @@ model usuarios {
   is_active      Boolean      @default(true)
 
   // Relaciones
+  rol_ref        roles?       @relation(fields: [rol_id], references: [id])
   refresh_tokens refresh_tokens[]
   reservas       reservas[]
 
   @@index([email], map: "ix_usuarios_email")
   @@index([google_id], map: "ix_usuarios_google_id")
   @@index([is_active], map: "ix_usuarios_active")
+  @@index([rol_id], map: "ix_usuarios_rol")
 }
 
 model refresh_tokens {

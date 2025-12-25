@@ -151,9 +151,22 @@ export class UsuariosService {
     const usuarios = await this.prisma.usuarios.findMany({
       where: includeInactive ? {} : { is_active: true },
       orderBy: { created_at: 'desc' },
+      include: {
+        rol_ref: true, // Incluir info del rol
+      },
     });
 
     return usuarios.map((u) => this.sanitizeUser(u));
+  }
+
+  /**
+   * Obtener todos los roles disponibles
+   */
+  async findAllRoles() {
+    return this.prisma.roles.findMany({
+      where: { is_active: true },
+      orderBy: { nivel: 'asc' },
+    });
   }
 
   /**

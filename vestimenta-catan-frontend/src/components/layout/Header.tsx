@@ -55,7 +55,7 @@ export function Header() {
   };
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/60">
       <div className="container mx-auto px-4">
         <div className="relative flex h-16 items-center justify-between">
           {/* Logo */}
@@ -74,9 +74,7 @@ export function Header() {
                 key={item.name}
                 href={item.href}
                 className={`text-sm font-medium transition-colors hover:text-primary ${
-                  isActive(item.href)
-                    ? 'text-primary'
-                    : 'text-muted-foreground'
+                  isActive(item.href) ? 'text-primary' : 'text-muted-foreground'
                 }`}
               >
                 {item.name}
@@ -91,7 +89,10 @@ export function Header() {
             ) : isAuthenticated && user ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+                  <Button
+                    variant="ghost"
+                    className="relative h-8 w-8 rounded-full"
+                  >
                     <Avatar className="h-8 w-8">
                       <AvatarFallback>{getInitials()}</AvatarFallback>
                     </Avatar>
@@ -101,7 +102,9 @@ export function Header() {
                   <div className="flex items-center justify-start gap-2 p-2">
                     <div className="flex flex-col space-y-1 leading-none">
                       <p className="font-medium">{fullName}</p>
-                      <p className="text-xs text-muted-foreground">{user.email}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {user.email}
+                      </p>
                       {isAdmin && (
                         <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded w-fit">
                           Admin
@@ -149,7 +152,7 @@ export function Header() {
                 <span className="sr-only">Abrir menu</span>
               </Button>
             </SheetTrigger>
-            <SheetContent side="right" className="w-[300px] sm:w-[400px]">
+            <SheetContent side="right" className="w-75 sm:w-100">
               <SheetHeader>
                 <SheetTitle className="flex items-center space-x-2">
                   <ShoppingBag className="h-5 w-5" />
@@ -183,29 +186,54 @@ export function Header() {
                       </Avatar>
                       <div>
                         <p className="font-medium">{fullName}</p>
-                        <p className="text-sm text-muted-foreground">{user.email}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {user.email}
+                        </p>
                       </div>
                     </div>
-                    <Button variant="outline" className="w-full" asChild onClick={() => setIsOpen(false)}>
+                    <Button
+                      variant="outline"
+                      className="w-full"
+                      asChild
+                      onClick={() => setIsOpen(false)}
+                    >
                       <Link href="/perfil">Mi Perfil</Link>
                     </Button>
-                    <Button variant="outline" className="w-full" asChild onClick={() => setIsOpen(false)}>
+                    <Button
+                      variant="outline"
+                      className="w-full"
+                      asChild
+                      onClick={() => setIsOpen(false)}
+                    >
                       <Link href="/mis-reservas">Mis Reservas</Link>
                     </Button>
-                    <Button variant="destructive" className="w-full" onClick={handleLogout}>
+                    <Button
+                      variant="destructive"
+                      className="w-full"
+                      onClick={handleLogout}
+                    >
                       <LogOut className="mr-2 h-4 w-4" />
                       Cerrar Sesion
                     </Button>
                   </div>
                 ) : (
                   <div className="space-y-3">
-                    <Button className="w-full" asChild onClick={() => setIsOpen(false)}>
+                    <Button
+                      className="w-full"
+                      asChild
+                      onClick={() => setIsOpen(false)}
+                    >
                       <Link href="/login">
                         <LogIn className="mr-2 h-4 w-4" />
                         Ingresar
                       </Link>
                     </Button>
-                    <Button variant="outline" className="w-full" asChild onClick={() => setIsOpen(false)}>
+                    <Button
+                      variant="outline"
+                      className="w-full"
+                      asChild
+                      onClick={() => setIsOpen(false)}
+                    >
                       <Link href="/registro">Registrarse</Link>
                     </Button>
                   </div>

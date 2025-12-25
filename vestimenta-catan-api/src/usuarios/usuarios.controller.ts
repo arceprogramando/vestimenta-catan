@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Delete,
+  ForbiddenException,
   Get,
   Param,
   ParseIntPipe,
@@ -19,6 +20,7 @@ import {
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { RequestUser } from '../auth/decorators/current-user.decorator';
 import { Roles } from '../auth/decorators/roles.decorator';
+import { canManageRole } from '../auth/guards/roles.guard';
 import { CreateUsuarioDto, UpdateUsuarioDto } from './dto';
 import { UsuariosService } from './usuarios.service';
 
@@ -49,6 +51,14 @@ export class UsuariosController {
   @ApiResponse({ status: 200, description: 'Lista de usuarios' })
   findAll(@Query('includeInactive') includeInactive?: string) {
     return this.usuariosService.findAll(includeInactive === 'true');
+  }
+
+  @Get('roles')
+  @Roles('admin')
+  @ApiOperation({ summary: 'Obtener todos los roles disponibles (solo admin)' })
+  @ApiResponse({ status: 200, description: 'Lista de roles con descripciones' })
+  getRoles() {
+    return this.usuariosService.findAllRoles();
   }
 
   @Get('me')
@@ -84,10 +94,18 @@ export class UsuariosController {
   @ApiOperation({ summary: 'Actualizar usuario por ID (solo admin)' })
   @ApiResponse({ status: 200, description: 'Usuario actualizado' })
   @ApiResponse({ status: 404, description: 'Usuario no encontrado' })
-  update(
+  @ApiResponse({ status: 403, description: 'No puede asignar un rol igual o superior al suyo' })
+  async update(
     @Param('id', ParseIntPipe) id: number,
     @Body() updateUsuarioDto: UpdateUsuarioDto,
+    @CurrentUser() currentUser: RequestUser,
   ) {
+    // Validar que el usuario solo pueda asignar roles de menor nivel
+    if (updateUsuarioDto.rol && !canManageRole(currentUser.rol, updateUsuarioDto.rol)) {
+      throw new ForbiddenException(
+        'No puede asignar un rol igual o superior al suyo',
+      );
+    }
     return this.usuariosService.update(id, updateUsuarioDto);
   }
 

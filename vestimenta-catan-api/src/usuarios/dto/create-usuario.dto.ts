@@ -57,10 +57,12 @@ export class CreateUsuarioDto {
   @ApiPropertyOptional({
     description: 'Rol del usuario',
     example: 'user',
-    enum: ['user', 'admin'],
+    enum: ['user', 'empleado', 'admin', 'superadmin'],
     default: 'user',
   })
   @IsOptional()
-  @IsEnum(['user', 'admin'], { message: 'El rol debe ser user o admin' })
-  rol?: 'user' | 'admin';
+  @IsEnum(['user', 'empleado', 'admin', 'superadmin'], {
+    message: 'El rol debe ser user, empleado, admin o superadmin',
+  })
+  rol?: 'user' | 'empleado' | 'admin' | 'superadmin';
 }

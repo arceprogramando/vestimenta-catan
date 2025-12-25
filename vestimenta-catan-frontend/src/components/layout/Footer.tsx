@@ -111,7 +111,7 @@ export function Footer() {
             <h3 className="font-semibold mb-4">Contacto</h3>
             <ul className="space-y-2 text-sm text-muted-foreground">
               <li className="flex items-start gap-2">
-                <MapPin className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                <MapPin className="h-4 w-4 mt-0.5 shrink-0" />
                 <span>
                   Gonzalez Catan, Buenos Aires<br />
                   Argentina

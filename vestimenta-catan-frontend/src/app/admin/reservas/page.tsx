@@ -216,7 +216,9 @@ export default function AdminReservasPage() {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
         <div>
           <h1 className="text-3xl font-bold">Gestion de Pedidos</h1>
-          <p className="text-muted-foreground">Administra los pedidos de los clientes</p>
+          <p className="text-muted-foreground">
+            Administra los pedidos de los clientes
+          </p>
         </div>
       </div>
 
@@ -225,19 +227,25 @@ export default function AdminReservasPage() {
         <Card>
           <CardHeader className="pb-2">
             <CardDescription>Pendientes</CardDescription>
-            <CardTitle className="text-3xl text-yellow-600">{pendientes}</CardTitle>
+            <CardTitle className="text-3xl text-yellow-600">
+              {pendientes}
+            </CardTitle>
           </CardHeader>
         </Card>
         <Card>
           <CardHeader className="pb-2">
             <CardDescription>Confirmados</CardDescription>
-            <CardTitle className="text-3xl text-blue-600">{confirmadas}</CardTitle>
+            <CardTitle className="text-3xl text-blue-600">
+              {confirmadas}
+            </CardTitle>
           </CardHeader>
         </Card>
         <Card>
           <CardHeader className="pb-2">
             <CardDescription>Completados</CardDescription>
-            <CardTitle className="text-3xl text-green-600">{completadas}</CardTitle>
+            <CardTitle className="text-3xl text-green-600">
+              {completadas}
+            </CardTitle>
           </CardHeader>
         </Card>
       </div>
@@ -254,7 +262,7 @@ export default function AdminReservasPage() {
           />
         </div>
         <Select value={filtroEstado} onValueChange={setFiltroEstado}>
-          <SelectTrigger className="w-full sm:w-[180px]">
+          <SelectTrigger className="w-full ssm:w-45">
             <Filter className="mr-2 h-4 w-4" />
             <SelectValue placeholder="Filtrar por estado" />
           </SelectTrigger>
@@ -320,9 +328,12 @@ export default function AdminReservasPage() {
                     <div className="text-right">
                       {reserva.precio_total && (
                         <>
-                          <p className="text-2xl font-bold">{formatPrecio(reserva.precio_total)}</p>
+                          <p className="text-2xl font-bold">
+                            {formatPrecio(reserva.precio_total)}
+                          </p>
                           <p className="text-sm text-muted-foreground">
-                            {reserva.cantidad} x {formatPrecio(reserva.precio_unitario)}
+                            {reserva.cantidad} x{' '}
+                            {formatPrecio(reserva.precio_unitario)}
                           </p>
                         </>
                       )}
@@ -339,18 +350,34 @@ export default function AdminReservasPage() {
                           alt={producto.nombre}
                           className="w-20 h-20 object-cover rounded-md"
                           onError={(e) => {
-                            e.currentTarget.src = '/images/products/remera-termica-hombre-1.jpeg';
+                            e.currentTarget.src =
+                              '/images/products/remera-termica-hombre-1.jpeg';
                           }}
                         />
                       )}
                       <div>
-                        <h3 className="font-semibold">{producto?.nombre || 'Producto'}</h3>
+                        <h3 className="font-semibold">
+                          {producto?.nombre || 'Producto'}
+                        </h3>
                         <div className="flex flex-wrap gap-1 mt-1">
                           {producto?.genero && (
-                            <Badge variant="outline" className="text-xs">{formatGenero(producto.genero)}</Badge>
+                            <Badge variant="outline" className="text-xs">
+                              {formatGenero(producto.genero)}
+                            </Badge>
                           )}
-                          {talle && <Badge variant="outline" className="text-xs">Talle {talle.nombre}</Badge>}
-                          {color && <Badge variant="outline" className="text-xs capitalize">{color.nombre}</Badge>}
+                          {talle && (
+                            <Badge variant="outline" className="text-xs">
+                              Talle {talle.nombre}
+                            </Badge>
+                          )}
+                          {color && (
+                            <Badge
+                              variant="outline"
+                              className="text-xs capitalize"
+                            >
+                              {color.nombre}
+                            </Badge>
+                          )}
                         </div>
                         <p className="text-sm text-muted-foreground mt-1">
                           Cantidad: {reserva.cantidad}
@@ -365,7 +392,9 @@ export default function AdminReservasPage() {
                         <>
                           <p className="text-sm">
                             {usuario.nombre || usuario.apellido
-                              ? `${usuario.nombre || ''} ${usuario.apellido || ''}`
+                              ? `${usuario.nombre || ''} ${
+                                  usuario.apellido || ''
+                                }`
                               : 'Sin nombre'}
                           </p>
                           <p className="text-sm text-muted-foreground flex items-center gap-1">
@@ -374,7 +403,9 @@ export default function AdminReservasPage() {
                           </p>
                         </>
                       ) : (
-                        <p className="text-sm text-muted-foreground">Cliente no registrado</p>
+                        <p className="text-sm text-muted-foreground">
+                          Cliente no registrado
+                        </p>
                       )}
                       {reserva.telefono_contacto && (
                         <p className="text-sm text-muted-foreground flex items-center gap-1 mt-1">
@@ -391,17 +422,21 @@ export default function AdminReservasPage() {
                       <strong>Notas:</strong> {reserva.notas}
                     </p>
                   )}
-                  {reserva.estado === 'cancelado' && reserva.motivo_cancelacion && (
-                    <p className="text-sm text-destructive mt-2">
-                      <strong>Motivo de cancelacion:</strong> {reserva.motivo_cancelacion}
-                    </p>
-                  )}
-                  {reserva.estado === 'confirmado' && reserva.fecha_confirmacion && (
-                    <p className="text-sm text-blue-600 mt-2">
-                      Confirmado el {formatFecha(reserva.fecha_confirmacion)}
-                      {reserva.confirmado_por && ` por ${reserva.confirmado_por}`}
-                    </p>
-                  )}
+                  {reserva.estado === 'cancelado' &&
+                    reserva.motivo_cancelacion && (
+                      <p className="text-sm text-destructive mt-2">
+                        <strong>Motivo de cancelacion:</strong>{' '}
+                        {reserva.motivo_cancelacion}
+                      </p>
+                    )}
+                  {reserva.estado === 'confirmado' &&
+                    reserva.fecha_confirmacion && (
+                      <p className="text-sm text-blue-600 mt-2">
+                        Confirmado el {formatFecha(reserva.fecha_confirmacion)}
+                        {reserva.confirmado_por &&
+                          ` por ${reserva.confirmado_por}`}
+                      </p>
+                    )}
 
                   {/* Acciones */}
                   <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t">
@@ -434,7 +469,8 @@ export default function AdminReservasPage() {
                         Marcar como completado
                       </Button>
                     )}
-                    {(reserva.estado === 'pendiente' || reserva.estado === 'confirmado') && (
+                    {(reserva.estado === 'pendiente' ||
+                      reserva.estado === 'confirmado') && (
                       <Button
                         size="sm"
                         variant="destructive"
@@ -467,7 +503,8 @@ export default function AdminReservasPage() {
           <DialogHeader>
             <DialogTitle>Cancelar Pedido #{reservaACancelar?.id}</DialogTitle>
             <DialogDescription>
-              Esta accion no se puede deshacer. El cliente sera notificado de la cancelacion.
+              Esta accion no se puede deshacer. El cliente sera notificado de la
+              cancelacion.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
@@ -505,12 +542,16 @@ export default function AdminReservasPage() {
       </Dialog>
 
       {/* Modal de comprobante */}
-      <Dialog open={comprobanteModalOpen} onOpenChange={setComprobanteModalOpen}>
+      <Dialog
+        open={comprobanteModalOpen}
+        onOpenChange={setComprobanteModalOpen}
+      >
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Comprobante de Pedido</DialogTitle>
             <DialogDescription>
-              Vista previa del comprobante. Haz clic en Imprimir para generar una copia.
+              Vista previa del comprobante. Haz clic en Imprimir para generar
+              una copia.
             </DialogDescription>
           </DialogHeader>
           <div className="border rounded-lg overflow-hidden">

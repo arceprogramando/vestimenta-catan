@@ -2,7 +2,13 @@
   "permissions": {
     "allow": [
       "Bash(npm:*)",
-      "Bash(docker exec:*)"
+      "Bash(docker exec:*)",
+      "Bash(pnpm add:*)",
+      "Bash(tasklist:*)",
+      "Bash(findstr:*)",
+      "Bash(taskkill:*)",
+      "Bash(timeout:*)",
+      "Bash(powershell -Command:*)"
     ]
   }
 }

@@ -2,7 +2,7 @@ import { Injectable, NotFoundException, BadRequestException } from '@nestjs/comm
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateReservaDto } from './dto/create-reserva.dto';
 import { UpdateReservaDto } from './dto/update-reserva.dto';
-import { Decimal } from '@prisma/client/runtime/library';
+import { Prisma } from '@prisma/client';
 
 // DTO para eliminación lógica
 export interface SoftDeleteDto {
@@ -42,7 +42,7 @@ export class ReservasService {
     // Obtener precio del producto y calcular total
     const precioUnitario = variante.producto.precio;
     const precioTotal = precioUnitario
-      ? new Decimal(precioUnitario.toString()).mul(createReservaDto.cantidad)
+      ? new Prisma.Decimal(precioUnitario.toString()).mul(createReservaDto.cantidad)
       : null;
 
     const reserva = await this.prisma.reservas.create({
@@ -158,7 +158,7 @@ export class ReservasService {
       updateData.cantidad = updateReservaDto.cantidad;
       // Recalcular precio total si cambia la cantidad
       if (existing.precio_unitario) {
-        updateData.precio_total = new Decimal(existing.precio_unitario.toString())
+        updateData.precio_total = new Prisma.Decimal(existing.precio_unitario.toString())
           .mul(updateReservaDto.cantidad);
       }
     }

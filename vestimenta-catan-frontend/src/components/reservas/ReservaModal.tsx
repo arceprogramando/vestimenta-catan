@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -111,7 +112,7 @@ export function ReservaModal({
               Te contactaremos pronto para confirmar la disponibilidad.
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter className="flex flex-col gap-2 sm:flex-row">
+          <DialogFooter className="flex flex-col gap-2 sm:flex-row sm:justify-center">
             <Button variant="outline" onClick={handleClose} className="w-full sm:w-auto">
               Seguir comprando
             </Button>

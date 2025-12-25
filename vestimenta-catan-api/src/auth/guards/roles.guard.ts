@@ -9,8 +9,20 @@ import { ROLES_KEY } from '../decorators/roles.decorator';
 import { RequestUser } from '../decorators/current-user.decorator';
 
 /**
- * Guard de autorización por roles
+ * Jerarquía de roles - mayor nivel = más permisos
+ * Un rol superior puede acceder a todo lo que accede un rol inferior
+ */
+export const ROLE_HIERARCHY: Record<string, number> = {
+  user: 1,
+  empleado: 2,
+  admin: 3,
+  superadmin: 4,
+};
+
+/**
+ * Guard de autorización por roles con jerarquía
  * - Verifica que el usuario tenga uno de los roles requeridos
+ * - Roles superiores heredan permisos de roles inferiores
  * - Debe usarse después de JwtAuthGuard
  */
 @Injectable()
@@ -37,10 +49,18 @@ export class RolesGuard implements CanActivate {
       throw new ForbiddenException('Usuario no autenticado');
     }
 
-    // Verificar si el usuario tiene alguno de los roles requeridos
-    const hasRole = requiredRoles.includes(user.rol);
+    // Obtener el nivel del rol del usuario
+    const userRoleLevel = ROLE_HIERARCHY[user.rol] || 0;
 
-    if (!hasRole) {
+    // Obtener el nivel mínimo requerido (el menor de los roles especificados)
+    const minRequiredLevel = Math.min(
+      ...requiredRoles.map((role) => ROLE_HIERARCHY[role] || 999),
+    );
+
+    // El usuario puede acceder si su nivel es >= al mínimo requerido
+    const hasAccess = userRoleLevel >= minRequiredLevel;
+
+    if (!hasAccess) {
       throw new ForbiddenException(
         `Acceso denegado. Se requiere uno de los siguientes roles: ${requiredRoles.join(', ')}`,
       );
@@ -48,4 +68,17 @@ export class RolesGuard implements CanActivate {
 
     return true;
   }
+}
+
+/**
+ * Helper para verificar si un rol puede gestionar otro rol
+ * (Un rol solo puede gestionar roles de menor nivel)
+ */
+export function canManageRole(
+  managerRole: string,
+  targetRole: string,
+): boolean {
+  const managerLevel = ROLE_HIERARCHY[managerRole] || 0;
+  const targetLevel = ROLE_HIERARCHY[targetRole] || 0;
+  return managerLevel > targetLevel;
 }

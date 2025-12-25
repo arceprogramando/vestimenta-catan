@@ -34,7 +34,7 @@ export default function Home() {
   return (
     <div className="min-h-screen">
       {/* Hero Section */}
-      <section className="bg-gradient-to-b from-primary/10 to-background py-12 md:py-20">
+      <section className="bg-linear-to-b from-primary/10 to-background py-12 md:py-20">
         <div className="container mx-auto px-4 text-center">
           <h1 className="text-3xl md:text-5xl font-bold mb-4">
             Vestimenta Catán

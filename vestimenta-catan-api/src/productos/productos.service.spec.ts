@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ProductosService } from './productos.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { CreateProductoDto } from './dto/create-producto.dto';
 
 describe('ProductosService', () => {
   let service: ProductosService;
@@ -74,7 +75,7 @@ describe('ProductosService', () => {
       genero: 'mujer',
       descripcion: 'Descripción',
       thumbnail: 'https://example.com/new.jpg',
-    };
+    } as CreateProductoDto;
 
     it('should create a new product', async () => {
       mockPrismaService.productos.create.mockResolvedValue({

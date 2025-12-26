@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateProductoDto } from './dto/create-producto.dto';
 import { UpdateProductoDto } from './dto/update-producto.dto';
@@ -108,7 +108,7 @@ export class ProductosService {
     // Verificar que el producto esté activo antes de actualizar
     const producto = await this.findOne(id);
     if (!producto) {
-      throw new Error('Producto no encontrado o fue eliminado');
+      throw new NotFoundException('Producto no encontrado o fue eliminado');
     }
 
     return this.prisma.productos.update({
@@ -125,7 +125,7 @@ export class ProductosService {
     // Verificar que el producto existe y está activo
     const producto = await this.findOne(id);
     if (!producto) {
-      throw new Error('Producto no encontrado o ya fue eliminado');
+      throw new NotFoundException('Producto no encontrado o ya fue eliminado');
     }
 
     // Realizar eliminación lógica en transacción

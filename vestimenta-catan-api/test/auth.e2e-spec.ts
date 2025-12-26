@@ -73,7 +73,7 @@ describe('Auth (E2E)', () => {
       expect(response.body).not.toHaveProperty('refreshToken');
 
       // Verificar cookies httpOnly
-      const cookies = response.headers['set-cookie'] as string[];
+      const cookies = response.headers['set-cookie'] as unknown as string[];
       expect(cookies).toBeDefined();
       expect(cookies.some((c: string) => c.includes('accessToken'))).toBe(true);
       expect(cookies.some((c: string) => c.includes('HttpOnly'))).toBe(true);
@@ -130,7 +130,7 @@ describe('Auth (E2E)', () => {
       expect(body.user.email).toBe(testUser.email);
 
       // Verificar cookies
-      const cookies = response.headers['set-cookie'] as string[];
+      const cookies = response.headers['set-cookie'] as unknown as string[];
       expect(cookies).toBeDefined();
     });
 
@@ -186,7 +186,9 @@ describe('Auth (E2E)', () => {
         .send(testUser)
         .expect(201);
 
-      const cookies = registerResponse.headers['set-cookie'] as string[];
+      const cookies = registerResponse.headers[
+        'set-cookie'
+      ] as unknown as string[];
       const accessToken = extractCookieValue(cookies, 'accessToken');
 
       // Usar el token para acceder a /me
@@ -221,7 +223,9 @@ describe('Auth (E2E)', () => {
         .send(testUser)
         .expect(201);
 
-      const cookies = registerResponse.headers['set-cookie'] as string[];
+      const cookies = registerResponse.headers[
+        'set-cookie'
+      ] as unknown as string[];
       const refreshToken = extractCookieValue(cookies, 'refreshToken');
 
       // Usar refresh token
@@ -231,7 +235,7 @@ describe('Auth (E2E)', () => {
         .expect(200);
 
       // Debe retornar nuevos tokens
-      const newCookies = response.headers['set-cookie'] as string[];
+      const newCookies = response.headers['set-cookie'] as unknown as string[];
       expect(newCookies).toBeDefined();
     });
   });
@@ -256,7 +260,9 @@ describe('Auth (E2E)', () => {
         .send(testUser)
         .expect(201);
 
-      const cookies = registerResponse.headers['set-cookie'] as string[];
+      const cookies = registerResponse.headers[
+        'set-cookie'
+      ] as unknown as string[];
       const accessToken = extractCookieValue(cookies, 'accessToken');
       const refreshToken = extractCookieValue(cookies, 'refreshToken');
 
@@ -287,7 +293,9 @@ describe('Auth (E2E)', () => {
         .send(testUser)
         .expect(201);
 
-      const cookies = registerResponse.headers['set-cookie'] as string[];
+      const cookies = registerResponse.headers[
+        'set-cookie'
+      ] as unknown as string[];
       const accessToken = extractCookieValue(cookies, 'accessToken');
 
       // Logout all

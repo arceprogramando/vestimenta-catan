@@ -4,6 +4,8 @@ import { ConflictException, NotFoundException } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import { UsuariosService } from './usuarios.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { CreateUsuarioDto } from './dto/create-usuario.dto';
+import { rol_usuario } from '@prisma/client';
 
 // Mock de bcrypt
 jest.mock('bcrypt');
@@ -19,16 +21,23 @@ describe('UsuariosService', () => {
     email: 'test@example.com',
     nombre: 'Test',
     apellido: 'User',
-    rol: 'user',
-    rol_id: BigInt(1),
+    rol: 'user' as rol_usuario,
+    rol_id: 1,
     is_active: true,
     created_at: new Date(),
+    created_by: null,
     updated_at: new Date(),
+    updated_by: null,
     deleted_at: null,
+    deleted_by: null,
+    delete_reason: null,
     password_hash: 'hashed_password',
     google_id: null,
     provider: 'local',
     avatar_url: null,
+    // Campos computados de Prisma extension
+    fullName: 'Test User',
+    isGoogleUser: false,
   };
 
   // Usuario sanitizado esperado (con Number)
@@ -88,12 +97,12 @@ describe('UsuariosService', () => {
   // Tests para create()
   // =============================================
   describe('create', () => {
-    const createDto = {
+    const createDto: CreateUsuarioDto = {
       email: 'new@example.com',
-      password: 'password123',
+      password: 'Password123!',
       nombre: 'New',
       apellido: 'User',
-      rol: 'user',
+      rol: 'user' as const,
     };
 
     it('should create a new user successfully', async () => {
@@ -101,8 +110,8 @@ describe('UsuariosService', () => {
       jest.spyOn(prismaService.usuarios, 'create').mockResolvedValue({
         ...mockDbUser,
         email: createDto.email,
-        nombre: createDto.nombre,
-        apellido: createDto.apellido,
+        nombre: createDto.nombre ?? null,
+        apellido: createDto.apellido ?? null,
       });
 
       const result = await service.create(createDto);
@@ -378,8 +387,26 @@ describe('UsuariosService', () => {
   describe('findAllRoles', () => {
     it('should return all active roles', async () => {
       const mockRoles = [
-        { id: BigInt(1), nombre: 'user', nivel: 1, is_active: true },
-        { id: BigInt(2), nombre: 'admin', nivel: 10, is_active: true },
+        {
+          id: 1,
+          codigo: 'user',
+          nombre: 'Usuario',
+          descripcion: 'Usuario básico',
+          nivel: 1,
+          is_active: true,
+          created_at: new Date(),
+          updated_at: new Date(),
+        },
+        {
+          id: 2,
+          codigo: 'admin',
+          nombre: 'Administrador',
+          descripcion: 'Administrador del sistema',
+          nivel: 10,
+          is_active: true,
+          created_at: new Date(),
+          updated_at: new Date(),
+        },
       ];
       jest.spyOn(prismaService.roles, 'findMany').mockResolvedValue(mockRoles);
 

@@ -163,6 +163,7 @@ export async function cleanDatabase(prisma: PrismaService): Promise<void> {
   await prisma.colores.deleteMany();
   await prisma.talles.deleteMany();
   await prisma.refresh_tokens.deleteMany();
+  await prisma.audit_log.deleteMany();
   await prisma.usuarios.deleteMany();
 }
 

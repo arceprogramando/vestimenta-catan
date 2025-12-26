@@ -130,7 +130,8 @@ export class ReservasService {
         where: { id: varianteData.producto_id },
       });
 
-      const precioUnitario = producto?.precio as DecimalLike | null;
+      // Obtener precio unitario del producto (Prisma Decimal tiene método toNumber)
+      const precioUnitario = this.extractDecimal(producto?.precio);
       const precioTotal = precioUnitario
         ? precioUnitario.toNumber() * createReservaDto.cantidad
         : null;
@@ -440,5 +441,19 @@ export class ReservasService {
           }
         : null,
     };
+  }
+
+  // Helper para extraer Decimal de Prisma de forma segura
+  private extractDecimal(value: unknown): DecimalLike | null {
+    if (
+      value !== null &&
+      value !== undefined &&
+      typeof value === 'object' &&
+      'toNumber' in value &&
+      typeof (value as DecimalLike).toNumber === 'function'
+    ) {
+      return value as DecimalLike;
+    }
+    return null;
   }
 }

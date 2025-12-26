@@ -49,7 +49,7 @@ function ProductosContent() {
     if (searchTerm) {
       filtered = filtered.filter(p =>
         p.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        p.descripcion.toLowerCase().includes(searchTerm.toLowerCase())
+        (p.descripcion?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false)
       );
     }
 

@@ -116,10 +116,10 @@ export default function AdminReservasPage() {
 
       return (
         reserva.id.toString().includes(searchLower) ||
-        producto?.nombre.toLowerCase().includes(searchLower) ||
-        usuario?.email.toLowerCase().includes(searchLower) ||
-        usuario?.nombre?.toLowerCase().includes(searchLower) ||
-        usuario?.apellido?.toLowerCase().includes(searchLower)
+        (producto?.nombre?.toLowerCase().includes(searchLower) ?? false) ||
+        (usuario?.email?.toLowerCase().includes(searchLower) ?? false) ||
+        (usuario?.nombre?.toLowerCase().includes(searchLower) ?? false) ||
+        (usuario?.apellido?.toLowerCase().includes(searchLower) ?? false)
       );
     }
 

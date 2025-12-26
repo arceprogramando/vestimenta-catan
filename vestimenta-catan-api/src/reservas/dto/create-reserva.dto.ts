@@ -3,6 +3,7 @@ import {
   IsOptional,
   IsString,
   Min,
+  Max,
   IsEnum,
   MaxLength,
 } from 'class-validator';
@@ -40,9 +41,11 @@ export class CreateReservaDto {
     example: 2,
     type: 'integer',
     minimum: 1,
+    maximum: 1000,
   })
   @IsInt({ message: 'La cantidad debe ser un número entero' })
   @Min(1, { message: 'La cantidad debe ser mayor a 0' })
+  @Max(1000, { message: 'La cantidad no puede exceder 1000 unidades' })
   cantidad: number;
 
   @ApiPropertyOptional({

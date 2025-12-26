@@ -5,6 +5,7 @@ import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { WinstonModule } from 'nest-winston';
 import { AppController, ApiController } from './app.controller';
 import { AppService } from './app.service';
+import { AuditModule } from './audit';
 import { AuthModule } from './auth/auth.module';
 import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
 import { RolesGuard } from './auth/guards/roles.guard';
@@ -36,6 +37,7 @@ import { UsuariosModule } from './usuarios/usuarios.module';
       },
     ]),
     PrismaModule,
+    AuditModule,
     AuthModule,
     UsuariosModule,
     ColoresModule,

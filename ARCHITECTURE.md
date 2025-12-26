@@ -415,7 +415,7 @@ sequenceDiagram
     participant API as API
     participant DB as Database
 
-    rect rgb(200, 230, 200)
+    rect rgb(144, 238, 144)
         Note over U,DB: Registro
         U->>FE: Completar formulario
         FE->>API: POST /api/auth/register
@@ -427,7 +427,7 @@ sequenceDiagram
         FE-->>U: Redirect a dashboard
     end
 
-    rect rgb(200, 200, 230)
+    rect rgb(135, 206, 250)
         Note over U,DB: Login
         U->>FE: Email + Password
         FE->>API: POST /api/auth/login

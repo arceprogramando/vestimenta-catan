@@ -12,6 +12,7 @@ Procedimientos de despliegue y rollback para Vestimenta Catán, siguiendo lineam
 - [Rollback](#rollback)
 - [Checklist de Despliegue](#checklist-de-despliegue)
 - [Troubleshooting](#troubleshooting)
+- [Health Checks y Monitoreo](#health-checks-y-monitoreo)
 
 ---
 
@@ -482,6 +483,172 @@ find docker-postgres/backups -name "*.sql" -mtime +7 -delete
 
 ---
 
+## Health Checks y Monitoreo
+
+### Endpoints Disponibles
+
+| Endpoint | Tipo | Descripción | Uso |
+|----------|------|-------------|-----|
+| `GET /health` | Liveness | ¿El proceso está vivo? | Kubernetes livenessProbe |
+| `GET /health/ready` | Readiness | ¿Puede recibir tráfico? | Kubernetes readinessProbe |
+| `GET /health/info` | Info | Uptime, versión, ambiente | Dashboards |
+
+### Diferencia entre Liveness y Readiness
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                                                                  │
+│  /health (Liveness)                                             │
+│  ─────────────────                                              │
+│  Pregunta: "¿El proceso Node.js está vivo?"                     │
+│  Si falla: REINICIAR el contenedor                              │
+│  Verifica: Solo que el proceso responda                         │
+│                                                                  │
+│  /health/ready (Readiness)                                      │
+│  ─────────────────────────                                      │
+│  Pregunta: "¿Puede atender requests?"                           │
+│  Si falla: SACAR del load balancer (NO reiniciar)               │
+│  Verifica: Base de datos + Memoria                              │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**Ejemplo práctico:** Si PostgreSQL se cae por 2 minutos:
+- `/health` → 200 OK (Node.js sigue vivo)
+- `/health/ready` → 503 Error (no puede conectar a BD)
+- **Resultado:** El pod se saca del load balancer pero NO se reinicia (sería inútil).
+
+### Respuestas de los Endpoints
+
+**Cuando todo está OK:**
+```bash
+curl http://localhost:3000/health/ready
+```
+```json
+{
+  "status": "ok",
+  "info": {
+    "database": { "status": "up", "responseTime": "5ms" },
+    "memory_heap": { "status": "up" }
+  }
+}
+```
+
+**Cuando algo falla (503):**
+```json
+{
+  "status": "error",
+  "error": {
+    "database": { "status": "down", "error": "Connection refused" }
+  }
+}
+```
+
+### Configuración en Docker Compose
+
+```yaml
+# docker-compose.prod.yml
+services:
+  api:
+    # ... otras configs ...
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s        # Chequear cada 30 segundos
+      timeout: 10s         # Timeout de cada chequeo
+      retries: 3           # 3 fallos = unhealthy
+      start_period: 40s    # Esperar 40s antes de empezar
+```
+
+### Configuración en Kubernetes
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vestimenta-api
+spec:
+  template:
+    spec:
+      containers:
+      - name: api
+        image: vestimenta-api:latest
+        ports:
+        - containerPort: 3000
+
+        # Liveness: ¿Proceso vivo? Si falla → reiniciar
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 3000
+          initialDelaySeconds: 30    # Esperar 30s antes de empezar
+          periodSeconds: 10          # Chequear cada 10s
+          failureThreshold: 3        # 3 fallos = reiniciar
+          timeoutSeconds: 5
+
+        # Readiness: ¿Puede recibir tráfico? Si falla → sacar del pool
+        readinessProbe:
+          httpGet:
+            path: /health/ready
+            port: 3000
+          initialDelaySeconds: 5     # Empezar rápido
+          periodSeconds: 5           # Chequear cada 5s
+          failureThreshold: 1        # 1 fallo = sacar del pool
+          timeoutSeconds: 3
+```
+
+### Configuración en AWS ALB
+
+```json
+{
+  "HealthCheckPath": "/health/ready",
+  "HealthCheckIntervalSeconds": 30,
+  "HealthCheckTimeoutSeconds": 5,
+  "HealthyThresholdCount": 2,
+  "UnhealthyThresholdCount": 3,
+  "Matcher": {
+    "HttpCode": "200"
+  }
+}
+```
+
+### Verificación Manual
+
+```bash
+# Verificar liveness
+curl -s http://localhost:3000/health | jq
+
+# Verificar readiness
+curl -s http://localhost:3000/health/ready | jq
+
+# Verificar info
+curl -s http://localhost:3000/health/info | jq
+
+# Verificar con status code
+curl -s -o /dev/null -w "%{http_code}" http://localhost:3000/health/ready
+# Debería mostrar: 200 o 503
+```
+
+### Qué Verifican los Health Checks
+
+| Indicador | Umbral | Descripción |
+|-----------|--------|-------------|
+| `database` | Timeout 3s | Ejecuta `SELECT 1` en PostgreSQL |
+| `memory_heap` | < 500MB | Verifica uso de heap de Node.js |
+
+### Personalización
+
+Los umbrales se pueden ajustar en [health.controller.ts](vestimenta-catan-api/src/health/health.controller.ts):
+
+```typescript
+// Cambiar timeout de BD (default: 3000ms)
+() => this.prismaHealth.isHealthy('database', 5000)
+
+// Cambiar límite de memoria (default: 500MB)
+() => this.memoryHealth.checkHeap('memory_heap', 1024 * 1024 * 1024) // 1GB
+```
+
+---
+
 ## Contactos de Emergencia
 
 | Rol | Nombre | Contacto |
@@ -496,9 +663,10 @@ find docker-postgres/backups -name "*.sql" -mtime +7 -delete
 
 | Fecha | Versión | Cambios |
 |-------|---------|---------|
+| 2025-12-26 | 1.1 | Agregada sección Health Checks y Monitoreo |
 | 2025-12-26 | 1.0 | Documento inicial |
 
 ---
 
 **Última actualización**: 2025-12-26
-**Versión del documento**: 1.0
+**Versión del documento**: 1.1

@@ -13,7 +13,16 @@
       "Bash(pnpm run build:*)",
       "Bash(xargs cat:*)",
       "Bash(cat:*)",
-      "Bash(pnpm run lint:*)"
+      "Bash(pnpm run lint:*)",
+      "Bash(npx dotenv:*)",
+      "Bash(del \"d:\\\\dev\\\\vestimenta-catan\\\\vestimenta-catan-api\\\\prisma\\\\prisma.config.ts\")",
+      "Bash(pnpm run test:e2e:*)",
+      "Bash(docker-compose up:*)",
+      "Bash(docker ps:*)",
+      "Bash(git -C /d/dev/vestimenta-catan show cb78ba6 --name-only --oneline)",
+      "Bash(git -C /d/dev/vestimenta-catan diff vestimenta-catan-api/package.json)",
+      "Bash(pnpm run test:*)",
+      "Bash(git -C /d/dev/vestimenta-catan status)"
     ]
   }
 }

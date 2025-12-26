@@ -7,6 +7,7 @@ import { AppController, ApiController } from './app.controller';
 import { AppService } from './app.service';
 import { AuditModule } from './audit';
 import { AuthModule } from './auth/auth.module';
+import { HealthModule } from './health';
 import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
 import { RolesGuard } from './auth/guards/roles.guard';
 import { ColoresModule } from './colores/colores.module';
@@ -37,6 +38,7 @@ import { UsuariosModule } from './usuarios/usuarios.module';
       },
     ]),
     PrismaModule,
+    HealthModule,
     AuditModule,
     AuthModule,
     UsuariosModule,

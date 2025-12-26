@@ -57,9 +57,7 @@ function ProductosContent() {
   }, [productos, selectedGenero, searchTerm]);
 
   useEffect(() => {
-    if (generoFilter) {
-      setSelectedGenero(generoFilter);
-    }
+    setSelectedGenero(generoFilter || 'todos');
   }, [generoFilter]);
 
   const generos = ['todos', 'hombre', 'mujer', 'ninios'];

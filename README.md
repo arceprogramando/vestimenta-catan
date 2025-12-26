@@ -72,12 +72,20 @@ cd vestimenta-catan
 npm install
 ```
 
-### 3. Iniciar base de datos
+### 3. Iniciar bases de datos
 
 ```bash
 cd docker-postgres
 docker-compose up -d
 ```
+
+Esto levanta 3 bases de datos PostgreSQL:
+
+| Ambiente | Puerto | Base de Datos | Uso |
+|----------|--------|---------------|-----|
+| Desarrollo | 5433 | `comercio_electronico_db` | Desarrollo local |
+| Test | 5434 | `comercio_electronico_db_test` | Tests E2E automatizados |
+| Staging | 5435 | `comercio_electronico_db_staging_homologacion` | QA y demos |
 
 ### 4. Configurar Backend
 
@@ -216,28 +224,35 @@ http://localhost:3000/api/docs
 
 ## Testing
 
-### Backend
+### Tests Unitarios
 
 ```bash
 cd vestimenta-catan-api
 
-# Tests unitarios
-pnpm run test
+pnpm run test          # Ejecutar tests
+pnpm run test:watch    # Tests en modo watch
+pnpm run test:cov      # Tests con reporte de cobertura
+```
 
-# Tests con watch
-pnpm run test:watch
+### Tests E2E (End-to-End)
 
-# Tests con coverage
-pnpm run test:cov
+Los tests E2E corren contra la base de datos de test (`pg17_test` en puerto 5434).
 
-# Tests E2E
+```bash
+# Asegurarse que la BD de test esté corriendo
+docker-compose up -d db_test
+
+# Ejecutar tests E2E
+cd vestimenta-catan-api
 pnpm run test:e2e
 ```
 
-### Validación completa
+La base de datos de test se limpia automáticamente entre corridas de tests.
+
+### Validación Completa (CI)
 
 ```bash
-# Desde la raíz del monorepo
+# Desde la raíz del monorepo - ejecuta lint + tests
 npm run validate
 ```
 

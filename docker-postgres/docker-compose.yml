@@ -89,22 +89,46 @@ services:
     depends_on:
       - db
 
+  # ===========================================
+  # Servicio de BACKUP AUTOMÁTICO DIARIO
+  # Hace backup de desarrollo y staging cada 24h
+  # Los backups se guardan en ./backups/
+  # ===========================================
   backup:
     image: postgres:17-alpine
     container_name: pg_backup
-    restart: 'no'
+    restart: unless-stopped
     environment:
       PGPASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_DB: ${POSTGRES_DB}
     volumes:
       - ./backups:/backups
     depends_on:
-      - db
+      db:
+        condition: service_healthy
+      db_staging_homologacion:
+        condition: service_healthy
     command: >
       sh -c "
+      echo '=== Backup service started ===' &&
       while true; do
-        echo 'Creating backup...'
-        pg_dump -h db -U ${POSTGRES_USER} -d ${POSTGRES_DB} > /backups/backup_$$(date +%Y%m%d_%H%M%S).sql
-        echo 'Backup created successfully'
+        DATE=$$(date +%Y%m%d_%H%M%S) &&
+        echo \"[\$$DATE] Starting daily backups...\" &&
+
+        echo 'Backing up DEVELOPMENT database...' &&
+        pg_dump -h db -U $${POSTGRES_USER} -d $${POSTGRES_DB} > /backups/dev_$${DATE}.sql &&
+        echo 'Development backup completed: dev_'$${DATE}'.sql' &&
+
+        echo 'Backing up STAGING database...' &&
+        pg_dump -h db_staging_homologacion -U $${POSTGRES_USER} -d $${POSTGRES_DB}_staging_homologacion > /backups/staging_$${DATE}.sql &&
+        echo 'Staging backup completed: staging_'$${DATE}'.sql' &&
+
+        echo 'Cleaning old backups (keeping last 7 days)...' &&
+        find /backups -name '*.sql' -mtime +7 -delete 2>/dev/null || true &&
+
+        echo '=== All backups completed ===' &&
+        echo 'Next backup in 24 hours...' &&
         sleep 86400
       done
       "

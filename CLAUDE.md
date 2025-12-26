@@ -22,11 +22,13 @@ pnpm install              # Install dependencies
 pnpm run start:dev        # Development server with watch
 pnpm run build            # Production build
 pnpm run start:prod       # Run production build
-pnpm run test             # Run tests
-pnpm run test:watch       # Tests in watch mode
-pnpm run test:e2e         # End-to-end tests
+pnpm run test             # Run unit tests
+pnpm run test:watch       # Unit tests in watch mode
+pnpm run test:e2e         # E2E tests (requires pg17_test running)
 pnpm run lint             # ESLint with autofix
 ```
+
+**E2E Testing:** Tests run against `pg17_test` database (port 5434). The test database is cleaned between test runs. Configuration in `.env.test`.
 
 ### Frontend (`vestimenta-catan-frontend/`)
 
@@ -40,12 +42,20 @@ npm run lint              # ESLint
 ### Database (`docker-postgres/`)
 
 ```bash
-docker-compose up -d      # Start PostgreSQL + pgAdmin
+docker-compose up -d      # Start all databases + pgAdmin
 docker-compose down       # Stop services
 ```
 
+**Database Environments:**
+
+| Environment | Container | Port | Database | Purpose |
+|-------------|-----------|------|----------|---------|
+| Development | `pg17` | 5433 | `comercio_electronico_db` | Local development |
+| Test (E2E) | `pg17_test` | 5434 | `comercio_electronico_db_test` | Automated E2E tests |
+| Staging | `pg17_staging_homologacion` | 5435 | `comercio_electronico_db_staging_homologacion` | QA and demos |
+
 - pgAdmin available at http://localhost:8080
-- Database backup: `docker-postgres/backups/backup_completo.sql`
+- All databases start automatically with `docker-compose up -d`
 
 ### Prisma (from backend directory)
 

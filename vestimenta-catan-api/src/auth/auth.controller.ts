@@ -64,12 +64,11 @@ export class AuthController {
   ) {
     const result = await this.authService.register(registerDto);
 
-    // Establecer refresh token en cookie httpOnly
-    this.setRefreshTokenCookie(res, result.refreshToken);
+    // Establecer ambos tokens en cookies httpOnly
+    this.setAuthCookies(res, result.accessToken, result.refreshToken);
 
-    // No enviar el refresh token en el body
+    // No enviar tokens en el body (seguridad)
     return {
-      accessToken: result.accessToken,
       expiresIn: result.expiresIn,
       tokenType: result.tokenType,
       user: result.user,
@@ -102,12 +101,11 @@ export class AuthController {
 
     const result = await this.authService.login(loginDto, userAgent, ipAddress);
 
-    // Establecer refresh token en cookie httpOnly
-    this.setRefreshTokenCookie(res, result.refreshToken);
+    // Establecer ambos tokens en cookies httpOnly
+    this.setAuthCookies(res, result.accessToken, result.refreshToken);
 
-    // No enviar el refresh token en el body
+    // No enviar tokens en el body (seguridad)
     return {
-      accessToken: result.accessToken,
       expiresIn: result.expiresIn,
       tokenType: result.tokenType,
       user: result.user,
@@ -140,12 +138,11 @@ export class AuthController {
       ipAddress,
     );
 
-    // Establecer refresh token en cookie httpOnly
-    this.setRefreshTokenCookie(res, result.refreshToken);
+    // Establecer ambos tokens en cookies httpOnly
+    this.setAuthCookies(res, result.accessToken, result.refreshToken);
 
-    // No enviar el refresh token en el body
+    // No enviar tokens en el body (seguridad)
     return {
-      accessToken: result.accessToken,
       expiresIn: result.expiresIn,
       tokenType: result.tokenType,
       user: result.user,
@@ -182,12 +179,11 @@ export class AuthController {
       ipAddress,
     );
 
-    // Establecer nuevo refresh token en cookie httpOnly
-    this.setRefreshTokenCookie(res, result.refreshToken);
+    // Establecer ambos tokens en cookies httpOnly
+    this.setAuthCookies(res, result.accessToken, result.refreshToken);
 
-    // No enviar el refresh token en el body
+    // No enviar tokens en el body (seguridad)
     return {
-      accessToken: result.accessToken,
       expiresIn: result.expiresIn,
       tokenType: result.tokenType,
       user: result.user,
@@ -214,8 +210,8 @@ export class AuthController {
       await this.authService.logout(user.userId, refreshToken);
     }
 
-    // Limpiar cookie
-    this.clearRefreshTokenCookie(res);
+    // Limpiar todas las cookies de auth
+    this.clearAuthCookies(res);
 
     return { message: 'Sesión cerrada exitosamente' };
   }
@@ -235,8 +231,8 @@ export class AuthController {
   ) {
     await this.authService.logoutAll(user.userId);
 
-    // Limpiar cookie
-    this.clearRefreshTokenCookie(res);
+    // Limpiar todas las cookies de auth
+    this.clearAuthCookies(res);
 
     return { message: 'Todas las sesiones han sido cerradas' };
   }
@@ -251,26 +247,51 @@ export class AuthController {
   }
 
   /**
-   * Establecer cookie httpOnly con el refresh token
+   * Establecer cookies httpOnly con los tokens
    */
-  private setRefreshTokenCookie(res: Response, refreshToken: string) {
+  private setAuthCookies(
+    res: Response,
+    accessToken: string,
+    refreshToken: string,
+  ) {
+    const isProduction = process.env.NODE_ENV === 'production';
+
+    // Access token cookie - expira en 15 minutos
+    res.cookie('accessToken', accessToken, {
+      httpOnly: true,
+      secure: isProduction,
+      sameSite: isProduction ? 'strict' : 'lax',
+      maxAge: 15 * 60 * 1000, // 15 minutos
+      path: '/',
+    });
+
+    // Refresh token cookie - expira en 7 días
     res.cookie('refreshToken', refreshToken, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
+      secure: isProduction,
+      sameSite: isProduction ? 'strict' : 'lax',
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 días
       path: '/api/auth',
     });
   }
 
   /**
-   * Limpiar cookie del refresh token
+   * Limpiar todas las cookies de autenticación
    */
-  private clearRefreshTokenCookie(res: Response) {
+  private clearAuthCookies(res: Response) {
+    const isProduction = process.env.NODE_ENV === 'production';
+
+    res.clearCookie('accessToken', {
+      httpOnly: true,
+      secure: isProduction,
+      sameSite: isProduction ? 'strict' : 'lax',
+      path: '/',
+    });
+
     res.clearCookie('refreshToken', {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
+      secure: isProduction,
+      sameSite: isProduction ? 'strict' : 'lax',
       path: '/api/auth',
     });
   }

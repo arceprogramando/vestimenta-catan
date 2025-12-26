@@ -198,7 +198,7 @@ export default function ProductoDetallePage() {
                       variant={selectedTalle === talle.id ? 'default' : 'outline'}
                       onClick={() => setSelectedTalle(talle.id)}
                       disabled={!tieneStock}
-                      className="min-w-[60px]"
+                      className="min-w-15"
                     >
                       {talle.nombre}
                     </Button>

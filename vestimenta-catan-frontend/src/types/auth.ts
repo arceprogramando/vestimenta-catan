@@ -10,7 +10,6 @@ export interface User {
 }
 
 export interface AuthResponse {
-  accessToken: string;
   expiresIn: number;
   tokenType: string;
   user: User;
@@ -30,7 +29,6 @@ export interface RegisterCredentials {
 
 export interface AuthState {
   user: User | null;
-  accessToken: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
   error: string | null;

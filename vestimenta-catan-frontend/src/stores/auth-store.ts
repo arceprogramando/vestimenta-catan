@@ -1,13 +1,19 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { api } from '@/lib/axios';
-import type { User, LoginCredentials, RegisterCredentials, AuthResponse } from '@/types/auth';
+import type { User, LoginCredentials, RegisterCredentials } from '@/types/auth';
 import { AxiosError } from 'axios';
+
+// Response del backend (ya no incluye accessToken)
+interface AuthApiResponse {
+  expiresIn: number;
+  tokenType: string;
+  user: User;
+}
 
 interface AuthStore {
   // State
   user: User | null;
-  accessToken: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
   error: string | null;
@@ -19,7 +25,7 @@ interface AuthStore {
   register: (credentials: RegisterCredentials) => Promise<void>;
   logout: () => Promise<void>;
   logoutAll: () => Promise<void>;
-  fetchUser: () => Promise<void>;
+  checkAuth: () => Promise<void>;
   clearError: () => void;
   setHydrated: () => void;
 }
@@ -29,7 +35,6 @@ export const useAuthStore = create<AuthStore>()(
     (set, get) => ({
       // Initial state
       user: null,
-      accessToken: null,
       isAuthenticated: false,
       isLoading: false,
       error: null,
@@ -41,15 +46,12 @@ export const useAuthStore = create<AuthStore>()(
         set({ isLoading: true, error: null });
 
         try {
-          const response = await api.post<AuthResponse>('/auth/login', credentials);
-          const { accessToken, user } = response.data;
-
-          // Guardar token en localStorage para el interceptor
-          localStorage.setItem('accessToken', accessToken);
+          // El backend setea las cookies httpOnly automáticamente
+          const response = await api.post<AuthApiResponse>('/auth/login', credentials);
+          const { user } = response.data;
 
           set({
             user,
-            accessToken,
             isAuthenticated: true,
             isLoading: false,
             error: null,
@@ -60,7 +62,6 @@ export const useAuthStore = create<AuthStore>()(
 
           set({
             user: null,
-            accessToken: null,
             isAuthenticated: false,
             isLoading: false,
             error: message,
@@ -74,15 +75,12 @@ export const useAuthStore = create<AuthStore>()(
         set({ isLoading: true, error: null });
 
         try {
-          const response = await api.post<AuthResponse>('/auth/google', { credential });
-          const { accessToken, user } = response.data;
-
-          // Guardar token en localStorage para el interceptor
-          localStorage.setItem('accessToken', accessToken);
+          // El backend setea las cookies httpOnly automáticamente
+          const response = await api.post<AuthApiResponse>('/auth/google', { credential });
+          const { user } = response.data;
 
           set({
             user,
-            accessToken,
             isAuthenticated: true,
             isLoading: false,
             error: null,
@@ -93,7 +91,6 @@ export const useAuthStore = create<AuthStore>()(
 
           set({
             user: null,
-            accessToken: null,
             isAuthenticated: false,
             isLoading: false,
             error: message,
@@ -107,15 +104,12 @@ export const useAuthStore = create<AuthStore>()(
         set({ isLoading: true, error: null });
 
         try {
-          const response = await api.post<AuthResponse>('/auth/register', credentials);
-          const { accessToken, user } = response.data;
-
-          // Guardar token en localStorage para el interceptor
-          localStorage.setItem('accessToken', accessToken);
+          // El backend setea las cookies httpOnly automáticamente
+          const response = await api.post<AuthApiResponse>('/auth/register', credentials);
+          const { user } = response.data;
 
           set({
             user,
-            accessToken,
             isAuthenticated: true,
             isLoading: false,
             error: null,
@@ -126,7 +120,6 @@ export const useAuthStore = create<AuthStore>()(
 
           set({
             user: null,
-            accessToken: null,
             isAuthenticated: false,
             isLoading: false,
             error: message,
@@ -140,15 +133,13 @@ export const useAuthStore = create<AuthStore>()(
         set({ isLoading: true });
 
         try {
+          // El backend limpia las cookies httpOnly
           await api.post('/auth/logout');
         } catch {
           // Ignorar errores de logout (puede que el token ya expire)
         } finally {
-          localStorage.removeItem('accessToken');
-
           set({
             user: null,
-            accessToken: null,
             isAuthenticated: false,
             isLoading: false,
             error: null,
@@ -160,15 +151,13 @@ export const useAuthStore = create<AuthStore>()(
         set({ isLoading: true });
 
         try {
+          // El backend limpia las cookies httpOnly
           await api.post('/auth/logout-all');
         } catch {
           // Ignorar errores
         } finally {
-          localStorage.removeItem('accessToken');
-
           set({
             user: null,
-            accessToken: null,
             isAuthenticated: false,
             isLoading: false,
             error: null,
@@ -176,21 +165,17 @@ export const useAuthStore = create<AuthStore>()(
         }
       },
 
-      fetchUser: async () => {
-        const { accessToken } = get();
-
-        if (!accessToken) {
-          set({ isAuthenticated: false, user: null });
-          return;
-        }
+      checkAuth: async () => {
+        // Si ya tenemos usuario en el store persistido, verificar con el backend
+        const { user: currentUser } = get();
 
         set({ isLoading: true });
 
         try {
+          // Las cookies se envían automáticamente
           const response = await api.get<{ userId: number; email: string; rol: string }>('/auth/me');
 
-          // El endpoint /auth/me retorna datos parciales, mantener el user existente
-          const currentUser = get().user;
+          // Actualizar con datos del backend
           if (currentUser) {
             set({
               user: {
@@ -217,10 +202,9 @@ export const useAuthStore = create<AuthStore>()(
             });
           }
         } catch {
-          localStorage.removeItem('accessToken');
+          // Si falla, limpiar estado (cookies inválidas o expiradas)
           set({
             user: null,
-            accessToken: null,
             isAuthenticated: false,
             isLoading: false,
           });
@@ -231,28 +215,23 @@ export const useAuthStore = create<AuthStore>()(
     }),
     {
       name: 'auth-storage',
+      // Solo persistir el usuario (no tokens - están en cookies httpOnly)
       partialize: (state) => ({
         user: state.user,
-        accessToken: state.accessToken,
         isAuthenticated: state.isAuthenticated,
       }),
       onRehydrateStorage: () => (state) => {
-        // Cuando se rehidrata el estado, sincronizar con localStorage
-        if (state?.accessToken) {
-          localStorage.setItem('accessToken', state.accessToken);
-        }
         state?.setHydrated();
       },
     }
   )
 );
 
-// Escuchar evento de logout forzado (desde el interceptor)
+// Escuchar evento de logout forzado (desde el interceptor de axios)
 if (typeof window !== 'undefined') {
   window.addEventListener('auth:logout', () => {
     useAuthStore.setState({
       user: null,
-      accessToken: null,
       isAuthenticated: false,
       isLoading: false,
       error: 'Sesion expirada',

@@ -2,6 +2,7 @@ import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
+import type { Request } from 'express';
 import { RequestUser } from '../decorators/current-user.decorator';
 
 /**
@@ -16,8 +17,27 @@ export interface JwtPayload {
 }
 
 /**
+ * Extrae el JWT desde la cookie httpOnly o del header Authorization
+ * Prioriza la cookie para mayor seguridad
+ */
+const extractJwtFromCookieOrHeader = (req: Request): string | null => {
+  // Primero intentar desde cookie (más seguro)
+  if (req.cookies?.accessToken) {
+    return req.cookies.accessToken as string;
+  }
+
+  // Fallback al header Authorization para compatibilidad
+  const authHeader = req.headers.authorization;
+  if (authHeader?.startsWith('Bearer ')) {
+    return authHeader.substring(7);
+  }
+
+  return null;
+};
+
+/**
  * Estrategia para validar JWT Access Tokens
- * - Extrae el token del header Authorization: Bearer <token>
+ * - Extrae el token de la cookie httpOnly (prioridad) o del header Authorization
  * - Valida firma y expiración
  * - Retorna el usuario para inyectar en el request
  */
@@ -31,7 +51,7 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
     }
 
     super({
-      jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
+      jwtFromRequest: ExtractJwt.fromExtractors([extractJwtFromCookieOrHeader]),
       ignoreExpiration: false,
       secretOrKey: secret,
       algorithms: ['HS256'],

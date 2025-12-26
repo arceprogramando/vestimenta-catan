@@ -8,6 +8,8 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Loader2, ArrowLeft, ShoppingCart, Package } from 'lucide-react';
 import { ReservaModal } from '@/components/reservas/ReservaModal';
 import { ProductImage } from '@/components/product-image';
+import { publicApi } from '@/lib/axios';
+import { AxiosError } from 'axios';
 
 interface Variante {
   id: number;
@@ -52,17 +54,14 @@ export default function ProductoDetallePage() {
     const fetchProducto = async () => {
       try {
         setLoading(true);
-        const response = await fetch(`http://localhost:3000/api/productos/${productId}`);
-        if (!response.ok) {
-          if (response.status === 404) {
-            throw new Error('Producto no encontrado');
-          }
-          throw new Error('Error al cargar el producto');
-        }
-        const data = await response.json();
+        const { data } = await publicApi.get<Producto>(`/productos/${productId}`);
         setProducto(data);
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Error desconocido');
+        if (err instanceof AxiosError && err.response?.status === 404) {
+          setError('Producto no encontrado');
+        } else {
+          setError(err instanceof Error ? err.message : 'Error desconocido');
+        }
       } finally {
         setLoading(false);
       }

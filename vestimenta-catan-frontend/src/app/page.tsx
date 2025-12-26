@@ -15,20 +15,31 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    const controller = new AbortController();
+
     const fetchProductos = async () => {
       try {
+        setError(null);
         setLoading(true);
-        const response = await publicApi.get('/productos/stock-resumen');
+        const response = await publicApi.get('/productos/stock-resumen', {
+          signal: controller.signal,
+        });
         setProductos(response.data);
       } catch (err) {
+        // No mostrar error si fue cancelado por cleanup
+        if (controller.signal.aborted) return;
         setError(err instanceof Error ? err.message : 'Error desconocido');
         console.error('Error fetching productos:', err);
       } finally {
-        setLoading(false);
+        if (!controller.signal.aborted) {
+          setLoading(false);
+        }
       }
     };
 
     fetchProductos();
+
+    return () => controller.abort();
   }, []);
 
   return (
@@ -70,7 +81,7 @@ export default function Home() {
             <div className="text-center py-12">
               <p className="text-destructive mb-2">Error: {error}</p>
               <p className="text-sm text-muted-foreground">
-                Verifica que la API esté corriendo en http://localhost:3000
+                Verifica que la API esté corriendo
               </p>
             </div>
           )}

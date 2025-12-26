@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Loader2, Search } from 'lucide-react';
 import { ProductCard } from '@/components/product-card';
 import { Producto } from '@/types/producto';
+import { publicApi } from '@/lib/axios';
 
 // Componente interno que usa useSearchParams
 function ProductosContent() {
@@ -24,9 +25,7 @@ function ProductosContent() {
     const fetchProductos = async () => {
       try {
         setLoading(true);
-        const response = await fetch('http://localhost:3000/api/productos/stock-resumen');
-        if (!response.ok) throw new Error('Error al cargar productos');
-        const data = await response.json();
+        const { data } = await publicApi.get<Producto[]>('/productos/stock-resumen');
         setProductos(data);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Error desconocido');

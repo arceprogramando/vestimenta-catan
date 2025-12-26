@@ -2,21 +2,8 @@ import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
-
-interface RequestWithCookies {
-  cookies?: { refreshToken?: string };
-  headers: { authorization?: string };
-}
-
-/**
- * Payload del JWT Refresh Token
- */
-export interface RefreshTokenPayload {
-  sub: number; // userId
-  email: string;
-  iat?: number;
-  exp?: number;
-}
+import { RefreshTokenPayload } from '../../common/interfaces';
+import { RequestWithCookies } from '../../common/types';
 
 /**
  * Estrategia para validar JWT Refresh Tokens

@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateProductoDto } from './dto/create-producto.dto';
 import { UpdateProductoDto } from './dto/update-producto.dto';
+import { SoftDeleteDto } from '../common/interfaces';
 
 interface StockResumenItem {
   id: number;
@@ -10,12 +11,6 @@ interface StockResumenItem {
   descripcion: string;
   thumbnail: string;
   stock_total: bigint;
-}
-
-// DTO para eliminación lógica
-export interface SoftDeleteDto {
-  deleted_by?: string;
-  delete_reason?: string;
 }
 
 @Injectable()

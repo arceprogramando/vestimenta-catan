@@ -20,16 +20,10 @@ import {
 } from '@nestjs/swagger';
 import { SkipThrottle, Throttle } from '@nestjs/throttler';
 import type { Response } from 'express';
-
-interface RequestWithCookies {
-  cookies?: { refreshToken?: string };
-  headers: { 'user-agent'?: string; 'x-forwarded-for'?: string };
-  ip?: string;
-  user?: { payload: { sub: number }; refreshToken: string };
-}
 import { AuthService } from './auth.service';
 import { CurrentUser } from './decorators/current-user.decorator';
-import type { RequestUser } from './decorators/current-user.decorator';
+import type { RequestUser } from '../common/interfaces';
+import type { RequestWithCookies } from '../common/types';
 import { Public } from './decorators/public.decorator';
 import {
   AuthResponseDto,

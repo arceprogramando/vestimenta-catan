@@ -6,12 +6,7 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateProductoVarianteDto } from './dto/create-producto-variante.dto';
 import { UpdateProductoVarianteDto } from './dto/update-producto-variante.dto';
-
-// DTO para eliminación lógica
-export interface SoftDeleteDto {
-  deleted_by?: string;
-  delete_reason?: string;
-}
+import { SoftDeleteDto } from '../common/interfaces';
 
 // Interface para la variante con relaciones
 interface VarianteWithRelations {

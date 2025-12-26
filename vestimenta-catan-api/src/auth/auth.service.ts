@@ -10,14 +10,11 @@ import * as crypto from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import { UsuariosService, SanitizedUser } from '../usuarios/usuarios.service';
 import { LoginDto, RegisterDto } from './dto';
-import { JwtPayload } from './strategies/jwt.strategy';
-import { RefreshTokenPayload } from './strategies/jwt-refresh.strategy';
-
-interface TokensResponse {
-  accessToken: string;
-  refreshToken: string;
-  expiresIn: number;
-}
+import {
+  JwtPayload,
+  RefreshTokenPayload,
+  TokensResponse,
+} from '../common/interfaces';
 
 @Injectable()
 export class AuthService {

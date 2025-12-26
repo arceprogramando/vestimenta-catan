@@ -9,22 +9,7 @@ import {
 import { Request, Response } from 'express';
 import { WINSTON_MODULE_PROVIDER } from 'nest-winston';
 import { Logger } from 'winston';
-
-interface ErrorResponse {
-  statusCode: number;
-  timestamp: string;
-  path: string;
-  method: string;
-  message: string | string[];
-  error?: string;
-  requestId?: string;
-}
-
-interface HttpExceptionResponse {
-  message?: string | string[];
-  error?: string;
-  statusCode?: number;
-}
+import { ErrorResponse, HttpExceptionResponse } from '../interfaces';
 
 @Catch()
 export class GlobalExceptionFilter implements ExceptionFilter {

@@ -98,6 +98,7 @@ npx prisma generate                    # Generate client
 | Backend | Modular Architecture | Feature-based NestJS modules |
 | Backend | Dependency Injection | NestJS DI container |
 | Backend | DTO Pattern | class-validator for input validation |
+| Backend | Barrel Exports | index.ts files for simplified imports from common/ |
 | Backend | Repository (implicit) | Prisma ORM abstracts data access |
 | Frontend | Component-Based | React functional components |
 | Frontend | Flux/Store | Zustand for state management |
@@ -112,6 +113,15 @@ npx prisma generate                    # Generate client
 
 NestJS modular architecture with feature-based modules:
 
+- `common/` - Shared code following NestJS best practices:
+  - `interfaces/` - Centralized TypeScript interfaces with barrel exports:
+    - `soft-delete.interface.ts` - SoftDeleteDto, AuditContext
+    - `auth.interface.ts` - JwtPayload, RefreshTokenPayload, RequestUser, TokensResponse
+    - `api.interface.ts` - ErrorResponse, HttpExceptionResponse
+  - `types/` - Utility types for Prisma and request handling:
+    - `prisma.types.ts` - DecimalLike, RequestWithCookies, StockResumenItem
+  - `filters/` - Exception filters (HttpExceptionFilter)
+  - `middleware/` - Request middleware (AuditMiddleware)
 - `auth/` - JWT authentication with access/refresh tokens, Google OAuth, guards (`JwtAuthGuard`, `RolesGuard`), decorators (`@CurrentUser`, `@Public`, `@Roles`)
 - `usuarios/` - User management
 - `productos/` - Product catalog

@@ -23,7 +23,7 @@ import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { RequestUser } from '../auth/decorators/current-user.decorator';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { ReservasService } from './reservas.service';
-import type { SoftDeleteDto } from './reservas.service';
+import type { SoftDeleteDto } from '../common/interfaces';
 import { CreateReservaDto } from './dto/create-reserva.dto';
 import { UpdateReservaDto } from './dto/update-reserva.dto';
 

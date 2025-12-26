@@ -3,18 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import type { Request } from 'express';
-import { RequestUser } from '../decorators/current-user.decorator';
-
-/**
- * Payload del JWT Access Token
- */
-export interface JwtPayload {
-  sub: number; // userId
-  email: string;
-  rol: string;
-  iat?: number;
-  exp?: number;
-}
+import { JwtPayload, RequestUser } from '../../common/interfaces';
 
 /**
  * Extrae el JWT desde la cookie httpOnly o del header Authorization

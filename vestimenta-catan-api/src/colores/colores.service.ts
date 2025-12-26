@@ -2,12 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateColorDto } from './dto/create-color.dto';
 import { UpdateColorDto } from './dto/update-color.dto';
-
-// DTO para eliminación lógica
-export interface SoftDeleteDto {
-  deleted_by?: string;
-  delete_reason?: string;
-}
+import { SoftDeleteDto } from '../common/interfaces';
 
 @Injectable()
 export class ColoresService {

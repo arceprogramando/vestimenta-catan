@@ -7,18 +7,8 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreateReservaDto } from './dto/create-reserva.dto';
 import { UpdateReservaDto } from './dto/update-reserva.dto';
 import { estado_reserva } from '@prisma/client';
-
-// DTO para eliminación lógica
-export interface SoftDeleteDto {
-  deleted_by?: string;
-  delete_reason?: string;
-}
-
-// Tipo para valores Decimal de Prisma (tiene método toNumber)
-interface DecimalLike {
-  toNumber(): number;
-  toString(): string;
-}
+import { SoftDeleteDto } from '../common/interfaces';
+import { DecimalLike } from '../common/types';
 
 // Interface para datos de actualización de reserva
 interface ReservaUpdateData {

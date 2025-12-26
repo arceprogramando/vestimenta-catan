@@ -1,13 +1,8 @@
 import { createParamDecorator, ExecutionContext } from '@nestjs/common';
+import { RequestUser } from '../../common/interfaces';
 
-/**
- * Interface del usuario en el request (después de validar JWT)
- */
-export interface RequestUser {
-  userId: number;
-  email: string;
-  rol: string;
-}
+// Re-export para mantener compatibilidad con imports existentes
+export type { RequestUser } from '../../common/interfaces';
 
 /**
  * Decorador para obtener el usuario actual del request

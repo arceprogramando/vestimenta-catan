@@ -6,12 +6,7 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateTalleDto } from './dto/create-talle.dto';
 import { UpdateTalleDto } from './dto/update-talle.dto';
-
-// DTO para eliminación lógica
-export interface SoftDeleteDto {
-  deleted_by?: string;
-  delete_reason?: string;
-}
+import { SoftDeleteDto } from '../common/interfaces';
 
 @Injectable()
 export class TallesService {

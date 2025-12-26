@@ -12,7 +12,8 @@
       "Bash(mkdir:*)",
       "Bash(pnpm run build:*)",
       "Bash(xargs cat:*)",
-      "Bash(cat:*)"
+      "Bash(cat:*)",
+      "Bash(pnpm run lint:*)"
     ]
   }
 }

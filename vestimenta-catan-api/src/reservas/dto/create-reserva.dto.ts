@@ -1,4 +1,11 @@
-import { IsInt, IsOptional, IsString, Min, IsEnum } from 'class-validator';
+import {
+  IsInt,
+  IsOptional,
+  IsString,
+  Min,
+  IsEnum,
+  MaxLength,
+} from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 enum EstadoReserva {
@@ -57,8 +64,10 @@ export class CreateReservaDto {
     description: 'Notas adicionales de la reserva',
     example: 'Entregar antes del mediodía',
     type: 'string',
+    maxLength: 500,
   })
   @IsString({ message: 'Las notas deben ser texto' })
+  @MaxLength(500, { message: 'Las notas no pueden exceder 500 caracteres' })
   @IsOptional()
   notas?: string;
 
@@ -66,8 +75,10 @@ export class CreateReservaDto {
     description: 'Teléfono de contacto del cliente',
     example: '+54 9 2972 123456',
     type: 'string',
+    maxLength: 50,
   })
   @IsString({ message: 'El teléfono debe ser texto' })
+  @MaxLength(50, { message: 'El teléfono no puede exceder 50 caracteres' })
   @IsOptional()
   telefono_contacto?: string;
 }

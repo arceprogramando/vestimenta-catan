@@ -1,4 +1,13 @@
-import { IsString, IsNotEmpty, IsEnum, IsOptional } from 'class-validator';
+import {
+  IsString,
+  IsNotEmpty,
+  IsEnum,
+  IsOptional,
+  MaxLength,
+  IsUrl,
+  IsNumber,
+  Min,
+} from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 enum Genero {
@@ -17,6 +26,7 @@ export class CreateProductoDto {
   })
   @IsString({ message: 'El nombre debe ser una cadena de texto' })
   @IsNotEmpty({ message: 'El nombre del producto es obligatorio' })
+  @MaxLength(255, { message: 'El nombre no puede exceder 255 caracteres' })
   nombre: string;
 
   @ApiPropertyOptional({
@@ -26,6 +36,7 @@ export class CreateProductoDto {
     type: 'string',
   })
   @IsString({ message: 'La descripción debe ser una cadena de texto' })
+  @MaxLength(500, { message: 'La descripción no puede exceder 500 caracteres' })
   @IsOptional()
   descripcion?: string;
 
@@ -46,7 +57,7 @@ export class CreateProductoDto {
     type: 'string',
     format: 'uri',
   })
-  @IsString({ message: 'La URL debe ser una cadena de texto' })
+  @IsUrl({}, { message: 'La URL de la imagen debe ser válida' })
   @IsOptional()
   thumbnail?: string;
 
@@ -55,6 +66,8 @@ export class CreateProductoDto {
     example: 15000.0,
     type: 'number',
   })
+  @IsNumber({}, { message: 'El precio debe ser un número' })
+  @Min(0, { message: 'El precio no puede ser negativo' })
   @IsOptional()
   precio?: number;
 }

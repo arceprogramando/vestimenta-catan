@@ -8,7 +8,7 @@ export class CreateProductoVarianteDto {
     example: 1,
     type: 'integer',
   })
-  @IsInt()
+  @IsInt({ message: 'El ID del producto debe ser un número entero' })
   producto_id: number;
 
   @ApiPropertyOptional({
@@ -16,7 +16,7 @@ export class CreateProductoVarianteDto {
     example: 1,
     type: 'integer',
   })
-  @IsInt()
+  @IsInt({ message: 'El ID del talle debe ser un número entero' })
   @IsOptional()
   @Transform(({ value }: { value: string }) =>
     value ? parseInt(value) : undefined,
@@ -28,7 +28,7 @@ export class CreateProductoVarianteDto {
     example: 1,
     type: 'integer',
   })
-  @IsInt()
+  @IsInt({ message: 'El ID del color debe ser un número entero' })
   @Transform(({ value }: { value: string }) => parseInt(value))
   color_id: number;
 
@@ -38,7 +38,7 @@ export class CreateProductoVarianteDto {
     minimum: 0,
     type: 'integer',
   })
-  @IsInt()
-  @Min(0)
+  @IsInt({ message: 'La cantidad debe ser un número entero' })
+  @Min(0, { message: 'La cantidad no puede ser negativa' })
   cantidad: number;
 }

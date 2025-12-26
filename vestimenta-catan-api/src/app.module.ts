@@ -10,6 +10,7 @@ import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
 import { RolesGuard } from './auth/guards/roles.guard';
 import { ColoresModule } from './colores/colores.module';
 import { winstonConfig, HttpLoggerMiddleware } from './common/logger';
+import { validate } from './config';
 import { PrismaModule } from './prisma/prisma.module';
 import { ProductoVariantesModule } from './producto-variantes/producto-variantes.module';
 import { ProductosModule } from './productos/productos.module';
@@ -19,8 +20,10 @@ import { UsuariosModule } from './usuarios/usuarios.module';
 
 @Module({
   imports: [
+    // Validación de variables de entorno al inicio
     ConfigModule.forRoot({
       isGlobal: true,
+      validate,
     }),
     // Winston Logger
     WinstonModule.forRoot(winstonConfig),

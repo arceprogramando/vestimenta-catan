@@ -1,18 +1,39 @@
 import { NestFactory } from '@nestjs/core';
-import { ValidationPipe, RequestMethod } from '@nestjs/common';
-import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { ValidationPipe, RequestMethod, LoggerService } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { SwaggerModule } from '@nestjs/swagger';
+import {
+  WINSTON_MODULE_NEST_PROVIDER,
+  WINSTON_MODULE_PROVIDER,
+} from 'nest-winston';
 import helmet from 'helmet';
 import compression from 'compression';
 import cookieParser from 'cookie-parser';
+import { Logger } from 'winston';
 import { AppModule } from './app.module';
+import { GlobalExceptionFilter } from './common/filters';
+import { SanitizePipe } from './common/pipes';
+import { swaggerConfig, swaggerOptions } from './config';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  const apiPrefix = process.env.API_PREFIX || 'api';
-  const isProduction = process.env.NODE_ENV === 'production';
+  // Obtener ConfigService (variables ya validadas en app.module.ts)
+  const configService = app.get(ConfigService);
+  const port = configService.get<number>('PORT', 3000);
+  const apiPrefix = configService.get<string>('API_PREFIX', 'api');
+  const corsOrigin = configService.get<string>('CORS_ORIGIN');
+  const isProduction = configService.get<string>('NODE_ENV') === 'production';
 
-  // Security headers with Helmet
+  // Winston como logger de la aplicación
+  const logger = app.get<LoggerService>(WINSTON_MODULE_NEST_PROVIDER);
+  app.useLogger(logger);
+
+  // Exception filter global con logging
+  const winstonLogger = app.get<Logger>(WINSTON_MODULE_PROVIDER);
+  app.useGlobalFilters(new GlobalExceptionFilter(winstonLogger));
+
+  // Security headers
   app.use(
     helmet({
       contentSecurityPolicy: isProduction
@@ -24,18 +45,20 @@ async function bootstrap() {
               imgSrc: ["'self'", 'data:', 'https:'],
             },
           }
-        : false, // Disable CSP in development for Swagger
-      crossOriginEmbedderPolicy: false, // Required for Swagger UI
+        : false,
+      crossOriginEmbedderPolicy: false,
     }),
   );
 
-  // Compression for responses
+  // Compresión de respuestas
   app.use(compression());
 
-  // Middleware para parsear cookies
+  // Parser de cookies
   app.use(cookieParser());
 
+  // Pipes globales: sanitización + validación
   app.useGlobalPipes(
+    new SanitizePipe(),
     new ValidationPipe({
       whitelist: true,
       forbidNonWhitelisted: true,
@@ -43,16 +66,14 @@ async function bootstrap() {
     }),
   );
 
+  // CORS (corsOrigin ya viene validado del .env)
   app.enableCors({
-    origin: process.env.CORS_ORIGIN?.split(',') || [
-      'http://localhost:3000',
-      'http://localhost:3001',
-    ],
+    origin: corsOrigin?.split(','),
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
     credentials: true,
   });
 
-  // Configurar prefijo global para todos los controladores excepto rutas específicas
+  // Prefijo global
   app.setGlobalPrefix(apiPrefix, {
     exclude: [
       { path: '', method: RequestMethod.GET },
@@ -61,76 +82,20 @@ async function bootstrap() {
     ],
   });
 
-  const config = new DocumentBuilder()
-    .setTitle('Vestimenta Catán API - Sistema de Inventario')
-    .setDescription(
-      'API completa para gestión de inventario de vestimenta térmica. ' +
-        '\n\n🔧 **Funcionalidades principales:**' +
-        '\n• Gestión de productos base' +
-        '\n• Control de variantes por talle y color' +
-        '\n• Administración de stock en tiempo real' +
-        '\n• Gestión de colores y talles disponibles' +
-        '\n• Sistema de reservas' +
-        '\n• Autenticación JWT con access y refresh tokens' +
-        '\n\n🔐 **Autenticación:**' +
-        '\n• POST `/api/auth/register` - Registrar usuario' +
-        '\n• POST `/api/auth/login` - Iniciar sesión (retorna access token)' +
-        '\n• POST `/api/auth/refresh` - Refrescar tokens' +
-        '\n• POST `/api/auth/logout` - Cerrar sesión' +
-        '\n\n📚 **Endpoints disponibles:**' +
-        '\n• `/api/productos` - CRUD de productos principales' +
-        '\n• `/api/productos/stock-resumen` - Resumen de inventario' +
-        '\n• `/api/producto-variantes` - CRUD de variantes de productos' +
-        '\n• `/api/colores` - CRUD de colores disponibles' +
-        '\n• `/api/talles` - CRUD de talles disponibles' +
-        '\n• `/api/reservas` - CRUD de reservas de productos' +
-        '\n• `/api/usuarios` - Gestión de usuarios (admin)',
-    )
-    .setVersion('1.0')
-    .addBearerAuth(
-      {
-        type: 'http',
-        scheme: 'bearer',
-        bearerFormat: 'JWT',
-        name: 'Authorization',
-        description: 'Ingresa tu access token JWT',
-        in: 'header',
-      },
-      'access-token',
-    )
-    .addTag('Autenticación', '🔐 Auth - Registro, login y gestión de sesiones')
-    .addTag('Usuarios', '👤 Usuarios - Gestión de usuarios del sistema')
-    .addTag(
-      'productos',
-      '🛍️ Productos - Gestión de productos principales del catálogo',
-    )
-    .addTag(
-      'producto-variantes',
-      '📏 Variantes - Control detallado de stock por talle y color',
-    )
-    .addTag('colores', '🎨 Colores - Administración de paleta de colores')
-    .addTag('talles', '📐 Talles - Gestión de talles disponibles')
-    .addTag('reservas', '📋 Reservas - Sistema de reservas de productos')
-    .addServer('http://localhost:3000', 'Servidor de desarrollo local')
-    .build();
+  // Swagger (solo en desarrollo)
+  if (!isProduction) {
+    const document = SwaggerModule.createDocument(app, swaggerConfig);
+    SwaggerModule.setup(`${apiPrefix}/docs`, app, document, swaggerOptions);
+  }
 
-  const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup(`${apiPrefix}/docs`, app, document, {
-    swaggerOptions: {
-      persistAuthorization: true,
-      tagsSorter: 'alpha',
-      operationsSorter: 'alpha',
-    },
-    customSiteTitle: 'Vestimenta Catán API - Documentación',
-  });
-
-  const port = process.env.PORT ?? 3000;
   await app.listen(port);
 
   console.log(`🚀 Aplicación corriendo en: http://localhost:${port}`);
-  console.log(
-    `📚 Documentación Swagger: http://localhost:${port}/${apiPrefix}/docs`,
-  );
+  if (!isProduction) {
+    console.log(
+      `📚 Documentación Swagger: http://localhost:${port}/${apiPrefix}/docs`,
+    );
+  }
 }
 
 bootstrap().catch((error) => {

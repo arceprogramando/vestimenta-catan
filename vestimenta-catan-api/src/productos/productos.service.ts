@@ -63,10 +63,24 @@ export class ProductosService {
     `;
 
     // Convertir BigInt a Number para la serialización JSON
-    return stockResumen.map((item) => ({
-      ...item,
-      stock_total: Number(item.stock_total),
-    }));
+    // Nota: Number.MAX_SAFE_INTEGER = 9,007,199,254,740,991
+    // Para un sistema de inventario de ropa, este límite es más que suficiente
+    return stockResumen.map((item) => {
+      const stockTotal = item.stock_total;
+      // Validación defensiva: alertar si se supera el límite seguro de Number
+      if (
+        typeof stockTotal === 'bigint' &&
+        stockTotal > BigInt(Number.MAX_SAFE_INTEGER)
+      ) {
+        console.warn(
+          `[ProductosService] stock_total excede Number.MAX_SAFE_INTEGER para producto ${item.id}`,
+        );
+      }
+      return {
+        ...item,
+        stock_total: Number(stockTotal),
+      };
+    });
   }
 
   // Modificado: Solo buscar entre productos activos por defecto

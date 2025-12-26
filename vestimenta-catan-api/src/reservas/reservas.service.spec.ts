@@ -65,12 +65,16 @@ describe('ReservasService', () => {
     producto_variantes: {
       findUnique: jest.fn(),
     },
+    productos: {
+      findUnique: jest.fn(),
+    },
     reservas: {
       create: jest.fn(),
       findMany: jest.fn(),
       findUnique: jest.fn(),
       update: jest.fn(),
     },
+    $transaction: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -102,10 +106,29 @@ describe('ReservasService', () => {
     };
 
     it('should create a reservation successfully', async () => {
-      mockPrismaService.producto_variantes.findUnique.mockResolvedValue(
-        mockVariante,
-      );
-      mockPrismaService.reservas.create.mockResolvedValue(mockReserva);
+      // Mock de $transaction que ejecuta el callback con un mock de tx
+      mockPrismaService.$transaction.mockImplementation((callback) => {
+        const mockTx = {
+          $queryRaw: jest.fn().mockResolvedValue([
+            {
+              id: BigInt(1),
+              producto_id: 1,
+              cantidad: 10,
+              is_active: true,
+            },
+          ]),
+          productos: {
+            findUnique: jest.fn().mockResolvedValue({
+              id: 1,
+              precio: createDecimal(1500),
+            }),
+          },
+          reservas: {
+            create: jest.fn().mockResolvedValue(mockReserva),
+          },
+        };
+        return callback(mockTx);
+      });
 
       const result = await service.create(createDto);
 
@@ -115,7 +138,12 @@ describe('ReservasService', () => {
     });
 
     it('should throw NotFoundException if variant not found', async () => {
-      mockPrismaService.producto_variantes.findUnique.mockResolvedValue(null);
+      mockPrismaService.$transaction.mockImplementation((callback) => {
+        const mockTx = {
+          $queryRaw: jest.fn().mockResolvedValue([]), // Sin resultados
+        };
+        return callback(mockTx);
+      });
 
       await expect(service.create(createDto)).rejects.toThrow(
         NotFoundException,
@@ -123,9 +151,18 @@ describe('ReservasService', () => {
     });
 
     it('should throw BadRequestException if insufficient stock', async () => {
-      mockPrismaService.producto_variantes.findUnique.mockResolvedValue({
-        ...mockVariante,
-        cantidad: 1, // Solo 1 disponible
+      mockPrismaService.$transaction.mockImplementation((callback) => {
+        const mockTx = {
+          $queryRaw: jest.fn().mockResolvedValue([
+            {
+              id: BigInt(1),
+              producto_id: 1,
+              cantidad: 1, // Solo 1 disponible
+              is_active: true,
+            },
+          ]),
+        };
+        return callback(mockTx);
       });
 
       await expect(

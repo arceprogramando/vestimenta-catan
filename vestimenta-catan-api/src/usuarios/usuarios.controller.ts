@@ -108,14 +108,21 @@ export class UsuariosController {
     @Body() updateUsuarioDto: UpdateUsuarioDto,
     @CurrentUser() currentUser: RequestUser,
   ) {
-    // Validar que el usuario solo pueda asignar roles de menor nivel
-    if (
-      updateUsuarioDto.rol &&
-      !canManageRole(currentUser.rol, updateUsuarioDto.rol)
-    ) {
-      throw new ForbiddenException(
-        'No puede asignar un rol igual o superior al suyo',
-      );
+    // Validaciones de seguridad para cambio de rol
+    if (updateUsuarioDto.rol) {
+      // 1. No permitir que un usuario cambie su propio rol (escalación de privilegios)
+      if (currentUser.userId === id) {
+        throw new ForbiddenException(
+          'No puede modificar su propio rol. Solicite a otro administrador.',
+        );
+      }
+
+      // 2. Validar que solo pueda asignar roles de menor nivel que el suyo
+      if (!canManageRole(currentUser.rol, updateUsuarioDto.rol)) {
+        throw new ForbiddenException(
+          'No puede asignar un rol igual o superior al suyo',
+        );
+      }
     }
     return this.usuariosService.update(id, updateUsuarioDto);
   }

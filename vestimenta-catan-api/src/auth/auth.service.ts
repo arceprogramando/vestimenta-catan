@@ -116,7 +116,6 @@ export class AuthService {
         nombre: user.nombre,
         apellido: user.apellido,
         rol: user.rol,
-        rol_id: user.rol_id,
         provider: user.provider,
         avatar_url: user.avatar_url,
         is_active: user.is_active,
@@ -240,6 +239,28 @@ export class AuthService {
       throw new UnauthorizedException('Refresh token inválido o expirado');
     }
 
+    // Verificar que el usuario asociado existe y está activo
+    // Esto puede ocurrir si el usuario fue eliminado pero su token aún existe
+    if (!storedToken.usuario) {
+      // Revocar el token huérfano por seguridad
+      await this.prisma.refresh_tokens.update({
+        where: { id: storedToken.id },
+        data: { revoked: true, revoked_at: new Date() },
+      });
+      throw new UnauthorizedException(
+        'Usuario asociado al token no encontrado',
+      );
+    }
+
+    // Verificar que el usuario está activo
+    if (!storedToken.usuario.is_active) {
+      await this.prisma.refresh_tokens.update({
+        where: { id: storedToken.id },
+        data: { revoked: true, revoked_at: new Date() },
+      });
+      throw new UnauthorizedException('Usuario desactivado');
+    }
+
     // Revocar el token actual (Refresh Token Rotation)
     await this.prisma.refresh_tokens.update({
       where: { id: storedToken.id },
@@ -274,7 +295,7 @@ export class AuthService {
         nombre: usuario.nombre,
         apellido: usuario.apellido,
         rol: usuario.rol,
-        rol_id: usuario.rol_id,
+        // rol_id removido: es un detalle interno de la BD, nullable, y no documentado
         provider: usuario.provider,
         avatar_url: usuario.avatar_url,
         is_active: usuario.is_active,
@@ -354,25 +375,42 @@ export class AuthService {
     const accessExpiresInSeconds = this.parseExpiresIn(accessExpiresIn);
     const refreshExpiresInSeconds = this.parseExpiresIn(refreshExpiresIn);
 
-    const [accessToken, refreshToken] = await Promise.all([
-      this.jwtService.signAsync(accessPayload, {
-        secret: this.configService.get<string>('JWT_ACCESS_SECRET'),
-        expiresIn: accessExpiresInSeconds,
-      }),
-      this.jwtService.signAsync(refreshPayload, {
-        secret: this.configService.get<string>('JWT_REFRESH_SECRET'),
-        expiresIn: refreshExpiresInSeconds,
-      }),
-    ]);
+    // Validar que los secrets existen antes de firmar
+    const accessSecret = this.configService.get<string>('JWT_ACCESS_SECRET');
+    const refreshSecret = this.configService.get<string>('JWT_REFRESH_SECRET');
 
-    // Usar el valor ya calculado
-    const expiresIn = accessExpiresInSeconds;
+    if (!accessSecret || !refreshSecret) {
+      throw new Error(
+        'JWT secrets no configurados. Verifique JWT_ACCESS_SECRET y JWT_REFRESH_SECRET.',
+      );
+    }
 
-    return {
-      accessToken,
-      refreshToken,
-      expiresIn,
-    };
+    try {
+      const [accessToken, refreshToken] = await Promise.all([
+        this.jwtService.signAsync(accessPayload, {
+          secret: accessSecret,
+          expiresIn: accessExpiresInSeconds,
+        }),
+        this.jwtService.signAsync(refreshPayload, {
+          secret: refreshSecret,
+          expiresIn: refreshExpiresInSeconds,
+        }),
+      ]);
+
+      // Usar el valor ya calculado
+      const expiresIn = accessExpiresInSeconds;
+
+      return {
+        accessToken,
+        refreshToken,
+        expiresIn,
+      };
+    } catch (error) {
+      // Agregar contexto al error para facilitar debugging
+      const errorMessage =
+        error instanceof Error ? error.message : 'Error desconocido';
+      throw new Error(`Error generando tokens JWT: ${errorMessage}`);
+    }
   }
 
   /**

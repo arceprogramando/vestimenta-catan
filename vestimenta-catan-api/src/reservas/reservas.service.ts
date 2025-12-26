@@ -25,7 +25,7 @@ interface ReservaUpdateData {
   updated_at: Date;
   variante_id?: bigint;
   cantidad?: number;
-  precio_total?: number;
+  precio_total?: number | null;
   notas?: string | null;
   telefono_contacto?: string | null;
   estado?: estado_reserva;
@@ -90,64 +90,79 @@ export class ReservasService {
   constructor(private readonly prisma: PrismaService) {}
 
   async create(createReservaDto: CreateReservaDto) {
-    // Verificar que la variante existe y está activa
-    const variante = await this.prisma.producto_variantes.findUnique({
-      where: {
-        id: BigInt(createReservaDto.variante_id),
-        is_active: true,
-      },
-      include: {
-        producto: true,
-        talle: true,
-        color: true,
-      },
-    });
+    // Usamos una transacción con bloqueo pesimista para evitar race conditions
+    // Esto garantiza que el check de stock y la creación de reserva sean atómicos
+    return await this.prisma.$transaction(async (tx) => {
+      // SELECT FOR UPDATE: bloquea la fila hasta que termine la transacción
+      // Esto previene que otra transacción lea/modifique el stock mientras procesamos
+      const varianteRows = await tx.$queryRaw<
+        Array<{
+          id: bigint;
+          producto_id: number;
+          cantidad: number;
+          is_active: boolean;
+        }>
+      >`
+        SELECT id, producto_id, cantidad, is_active
+        FROM producto_variantes
+        WHERE id = ${BigInt(createReservaDto.variante_id)}
+        AND is_active = true
+        FOR UPDATE
+      `;
 
-    if (!variante) {
-      throw new NotFoundException(
-        'Variante de producto no encontrada o inactiva',
-      );
-    }
+      if (varianteRows.length === 0) {
+        throw new NotFoundException(
+          'Variante de producto no encontrada o inactiva',
+        );
+      }
 
-    // Verificar stock disponible
-    if (variante.cantidad < createReservaDto.cantidad) {
-      throw new BadRequestException(
-        `Stock insuficiente. Disponible: ${variante.cantidad}, solicitado: ${createReservaDto.cantidad}`,
-      );
-    }
+      const varianteData = varianteRows[0];
 
-    // Obtener precio del producto y calcular total
-    const precioUnitario = variante.producto.precio as DecimalLike | null;
-    const precioTotal = precioUnitario
-      ? precioUnitario.toNumber() * createReservaDto.cantidad
-      : null;
+      // Verificar stock disponible (ahora con datos bloqueados/consistentes)
+      if (varianteData.cantidad < createReservaDto.cantidad) {
+        throw new BadRequestException(
+          `Stock insuficiente. Disponible: ${varianteData.cantidad}, solicitado: ${createReservaDto.cantidad}`,
+        );
+      }
 
-    const reserva = await this.prisma.reservas.create({
-      data: {
-        variante_id: BigInt(createReservaDto.variante_id),
-        usuario_id: createReservaDto.usuario_id
-          ? BigInt(createReservaDto.usuario_id)
-          : null,
-        cantidad: createReservaDto.cantidad,
-        estado: (createReservaDto.estado as estado_reserva) || 'pendiente',
-        notas: createReservaDto.notas,
-        telefono_contacto: createReservaDto.telefono_contacto,
-        precio_unitario: precioUnitario,
-        precio_total: precioTotal,
-      },
-      include: {
-        variante: {
-          include: {
-            producto: true,
-            talle: true,
-            color: true,
-          },
+      // Obtener producto para el precio
+      const producto = await tx.productos.findUnique({
+        where: { id: varianteData.producto_id },
+      });
+
+      const precioUnitario = producto?.precio as DecimalLike | null;
+      const precioTotal = precioUnitario
+        ? precioUnitario.toNumber() * createReservaDto.cantidad
+        : null;
+
+      // Crear la reserva dentro de la misma transacción
+      const reserva = await tx.reservas.create({
+        data: {
+          variante_id: BigInt(createReservaDto.variante_id),
+          usuario_id: createReservaDto.usuario_id
+            ? BigInt(createReservaDto.usuario_id)
+            : null,
+          cantidad: createReservaDto.cantidad,
+          estado: (createReservaDto.estado as estado_reserva) || 'pendiente',
+          notas: createReservaDto.notas,
+          telefono_contacto: createReservaDto.telefono_contacto,
+          precio_unitario: precioUnitario,
+          precio_total: precioTotal,
         },
-        usuario: true,
-      },
-    });
+        include: {
+          variante: {
+            include: {
+              producto: true,
+              talle: true,
+              color: true,
+            },
+          },
+          usuario: true,
+        },
+      });
 
-    return this.serializeReserva(reserva);
+      return this.serializeReserva(reserva);
+    });
   }
 
   async findAll(includeDeleted = false) {
@@ -241,6 +256,10 @@ export class ReservasService {
       if (existing.precio_unitario) {
         updateData.precio_total =
           Number(existing.precio_unitario) * updateReservaDto.cantidad;
+      } else {
+        // Si no hay precio_unitario, limpiar precio_total para evitar datos inconsistentes
+        // Ej: cantidad=5 con precio_total viejo de cuando era cantidad=2
+        updateData.precio_total = null;
       }
     }
     if (updateReservaDto.notas !== undefined) {

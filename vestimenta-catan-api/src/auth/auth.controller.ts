@@ -18,7 +18,7 @@ import {
   ApiTags,
   ApiTooManyRequestsResponse,
 } from '@nestjs/swagger';
-import { Throttle } from '@nestjs/throttler';
+import { SkipThrottle, Throttle } from '@nestjs/throttler';
 import type { Response } from 'express';
 
 interface RequestWithCookies {
@@ -46,7 +46,8 @@ export class AuthController {
 
   @Public()
   @Post('register')
-  @Throttle({ default: { limit: 3, ttl: 60000 } }) // 3 registros por minuto
+  @SkipThrottle({ default: process.env.NODE_ENV === 'test' })
+  @Throttle({ default: { limit: 3, ttl: 60000 } }) // 3 registros por minuto (ignorado en test)
   @ApiOperation({ summary: 'Registrar un nuevo usuario' })
   @ApiBody({ type: RegisterDto })
   @ApiResponse({
@@ -77,7 +78,8 @@ export class AuthController {
 
   @Public()
   @Post('login')
-  @Throttle({ default: { limit: 5, ttl: 60000 } }) // 5 intentos de login por minuto
+  @SkipThrottle({ default: process.env.NODE_ENV === 'test' })
+  @Throttle({ default: { limit: 5, ttl: 60000 } }) // 5 intentos de login por minuto (ignorado en test)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Iniciar sesión' })
   @ApiBody({ type: LoginDto })

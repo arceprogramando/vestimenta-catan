@@ -27,11 +27,12 @@ import { UsuariosModule } from './usuarios/usuarios.module';
     }),
     // Winston Logger
     WinstonModule.forRoot(winstonConfig),
-    // Rate limiting global: 100 requests por minuto por IP
+    // Rate limiting global: configuración desde .env
+    // En tests usamos límites muy altos para evitar bloqueos
     ThrottlerModule.forRoot([
       {
-        ttl: 60000,
-        limit: 100,
+        ttl: parseInt(process.env.RATE_LIMIT_TTL || '60000', 10),
+        limit: parseInt(process.env.RATE_LIMIT_LIMIT || '100', 10),
       },
     ]),
     PrismaModule,

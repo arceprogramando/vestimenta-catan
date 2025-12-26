@@ -57,6 +57,47 @@ npx prisma generate                    # Generate client
 
 ## Architecture
 
+### Architectural Style
+
+**Monorepo with Client-Server separation** combining multiple patterns:
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                      FRONTEND (Next.js)                      │
+│  ┌─────────┐  ┌─────────┐  ┌─────────┐  ┌─────────────────┐ │
+│  │  Pages  │→ │Components│→ │ Stores  │→ │  Axios Client   │ │
+│  └─────────┘  └─────────┘  └─────────┘  └────────┬────────┘ │
+└──────────────────────────────────────────────────┼──────────┘
+                                                   │ REST API
+┌──────────────────────────────────────────────────┼──────────┐
+│                      BACKEND (NestJS)            │          │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────▼───────┐  │
+│  │ Controllers │→ │  Services   │→ │     Prisma ORM      │  │
+│  └─────────────┘  └─────────────┘  └──────────┬──────────┘  │
+└───────────────────────────────────────────────┼─────────────┘
+                                                │
+┌───────────────────────────────────────────────┼─────────────┐
+│                    PostgreSQL                  │             │
+└────────────────────────────────────────────────┴─────────────┘
+```
+
+### Design Patterns
+
+| Layer | Pattern | Implementation |
+|-------|---------|----------------|
+| Backend | Modular Architecture | Feature-based NestJS modules |
+| Backend | Dependency Injection | NestJS DI container |
+| Backend | DTO Pattern | class-validator for input validation |
+| Backend | Repository (implicit) | Prisma ORM abstracts data access |
+| Frontend | Component-Based | React functional components |
+| Frontend | Flux/Store | Zustand for state management |
+| Frontend | Custom Hooks | Reusable logic (`use-auth`, `use-reservas`) |
+| Database | Soft Delete | `deleted_at`, `is_active` fields |
+| Database | Audit Trail | `created_at`, `updated_at`, `created_by`, `updated_by` |
+| Database | State Machine | `estado_reserva` enum with transitions |
+| Database | Lookup Tables | Separate tables for `colores`, `talles` |
+| Auth | Stateless JWT | Access + Refresh tokens in httpOnly cookies |
+
 ### Backend Structure
 
 NestJS modular architecture with feature-based modules:
@@ -69,19 +110,21 @@ NestJS modular architecture with feature-based modules:
 - `reservas/` - Reservation system with state machine (pendiente → confirmado → completado/cancelado)
 - `prisma/` - Database service wrapper
 
-Pattern: Controllers → Services → Prisma ORM
+Layer flow: Controllers → Services → Prisma ORM → PostgreSQL
 
 ### Frontend Structure
 
-- `app/` - Next.js App Router pages
+- `app/` - Next.js App Router pages (SSR/SSG)
 - `components/ui/` - Radix UI primitive wrappers
 - `stores/` - Zustand stores with persistence (`auth-store.ts`, `reservas-store.ts`)
 - `hooks/` - Custom hooks (`use-auth.ts`, `use-reservas.ts`)
 - `lib/axios.ts` - Axios clients:
   - `publicApi` - For public endpoints (no auth required)
-  - `api` - Authenticated client with JWT interceptors and automatic token refresh
+  - `api` - Authenticated client with automatic token refresh via interceptors
 
 ### Database Schema
+
+**Normalization**: 3rd Normal Form (3NF) - no data redundancy, lookup tables for colors/sizes.
 
 Key models: `usuarios`, `productos`, `producto_variantes`, `reservas`, `colores`, `talles`
 
@@ -91,10 +134,11 @@ Enums: `genero` (mujer/hombre/ninios), `rol_usuario` (user/admin), `estado_reser
 
 ### Authentication Flow
 
-1. Access tokens: 15min expiry, sent in Authorization header
-2. Refresh tokens: 7d expiry, stored in httpOnly cookies
-3. Frontend axios interceptor queues requests during token refresh
-4. Rate limiting: 100 requests/min per IP
+1. Access tokens: 15min expiry, stored in httpOnly cookies
+2. Refresh tokens: 7d expiry, stored in httpOnly cookies (path: /api/auth)
+3. JWT extracted from cookies (priority) or Authorization header (fallback)
+4. Frontend axios interceptor queues requests during token refresh
+5. Rate limiting: 100 requests/min per IP, 5/min login, 3/min register
 
 ## Code Standards
 

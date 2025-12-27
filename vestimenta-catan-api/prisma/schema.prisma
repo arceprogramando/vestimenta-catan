@@ -199,9 +199,42 @@ model roles {
   updated_at  DateTime  @default(now()) @db.Timestamptz(6)
 
   // Relaciones
-  usuarios    usuarios[]
+  usuarios      usuarios[]
+  rol_permisos  rol_permisos[]
 
   @@index([codigo], map: "ix_roles_codigo")
+}
+
+model permisos {
+  id          Int       @id @default(autoincrement())
+  codigo      String    @unique @db.VarChar(50)  // "productos.ver", "productos.crear", etc.
+  nombre      String    @db.VarChar(100)         // Nombre para mostrar
+  descripcion String?   @db.Text                 // Descripción del permiso
+  modulo      String    @db.VarChar(50)          // "productos", "usuarios", "reservas", etc.
+  is_active   Boolean   @default(true)
+  created_at  DateTime  @default(now()) @db.Timestamptz(6)
+
+  // Relaciones
+  rol_permisos  rol_permisos[]
+
+  @@index([modulo], map: "ix_permisos_modulo")
+  @@index([is_active], map: "ix_permisos_active")
+}
+
+model rol_permisos {
+  id          Int       @id @default(autoincrement())
+  rol_id      Int
+  permiso_id  Int
+  created_at  DateTime  @default(now()) @db.Timestamptz(6)
+  created_by  String?   @db.VarChar(255)
+
+  // Relaciones
+  rol         roles     @relation(fields: [rol_id], references: [id], onDelete: Cascade)
+  permiso     permisos  @relation(fields: [permiso_id], references: [id], onDelete: Cascade)
+
+  @@unique([rol_id, permiso_id], map: "ux_rol_permiso")
+  @@index([rol_id], map: "ix_rol_permisos_rol")
+  @@index([permiso_id], map: "ix_rol_permisos_permiso")
 }
 
 // ============================================

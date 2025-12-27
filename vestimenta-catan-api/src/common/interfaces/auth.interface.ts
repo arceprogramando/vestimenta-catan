@@ -38,6 +38,10 @@ export interface RequestUser {
   email: string;
   /** Rol del usuario */
   rol: string;
+  /** ID del rol en la tabla roles */
+  rolId?: number;
+  /** Lista de permisos del usuario (cargados desde DB) */
+  permisos?: string[];
 }
 
 /**

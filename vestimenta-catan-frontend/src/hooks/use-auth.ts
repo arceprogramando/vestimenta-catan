@@ -1,8 +1,17 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/stores/auth-store';
+import type { UserRole } from '@/types/auth';
+
+// Jerarquia de roles
+const ROLE_HIERARCHY: Record<UserRole, number> = {
+  user: 1,
+  empleado: 2,
+  admin: 3,
+  superadmin: 4,
+};
 
 /**
  * Hook para acceder al estado de autenticacion
@@ -10,6 +19,37 @@ import { useAuthStore } from '@/stores/auth-store';
  */
 export function useAuth() {
   const store = useAuthStore();
+
+  // Verifica si el usuario tiene al menos cierto nivel de rol
+  const hasRole = useCallback(
+    (minRole: UserRole): boolean => {
+      if (!store.user) return false;
+      const userLevel = ROLE_HIERARCHY[store.user.rol] || 0;
+      const requiredLevel = ROLE_HIERARCHY[minRole] || 999;
+      return userLevel >= requiredLevel;
+    },
+    [store.user]
+  );
+
+  // Verifica si tiene un permiso especifico
+  const hasPermission = useCallback(
+    (permission: string): boolean => {
+      if (!store.user) return false;
+      // superadmin tiene todos los permisos
+      if (store.user.rol === 'superadmin') return true;
+      // Verificar en lista de permisos
+      return store.user.permisos?.includes(permission) || false;
+    },
+    [store.user]
+  );
+
+  // Verifica si tiene alguno de los permisos
+  const hasAnyPermission = useCallback(
+    (...permissions: string[]): boolean => {
+      return permissions.some((p) => hasPermission(p));
+    },
+    [hasPermission]
+  );
 
   return {
     // State
@@ -26,8 +66,16 @@ export function useAuth() {
     logoutAll: store.logoutAll,
     clearError: store.clearError,
 
+    // Role checks
+    hasRole,
+    hasPermission,
+    hasAnyPermission,
+
     // Computed
-    isAdmin: store.user?.rol === 'admin',
+    isAdmin: hasRole('admin'),
+    isSuperAdmin: store.user?.rol === 'superadmin',
+    isEmpleado: hasRole('empleado'),
+    canAccessAdmin: hasRole('empleado'), // empleado, admin y superadmin pueden acceder
     fullName: store.user
       ? `${store.user.nombre || ''} ${store.user.apellido || ''}`.trim() || store.user.email
       : null,
@@ -56,12 +104,12 @@ export function useRequireAuth(redirectTo = '/login') {
 }
 
 /**
- * Hook para rutas que solo deben ser accesibles por admin
- * Redirige a / si no es admin
+ * Hook para rutas que solo deben ser accesibles por admin/empleado
+ * Redirige a / si no tiene rol suficiente
  */
 export function useRequireAdmin(redirectTo = '/') {
   const router = useRouter();
-  const { isAuthenticated, isLoading, isHydrated, isAdmin } = useAuth();
+  const { isAuthenticated, isLoading, isHydrated, canAccessAdmin, isAdmin, isSuperAdmin, hasPermission } = useAuth();
 
   useEffect(() => {
     if (!isHydrated) return;
@@ -71,12 +119,12 @@ export function useRequireAdmin(redirectTo = '/') {
       return;
     }
 
-    if (isAuthenticated && !isAdmin && !isLoading) {
+    if (isAuthenticated && !canAccessAdmin && !isLoading) {
       router.push(redirectTo);
     }
-  }, [isAuthenticated, isAdmin, isLoading, isHydrated, router, redirectTo]);
+  }, [isAuthenticated, canAccessAdmin, isLoading, isHydrated, router, redirectTo]);
 
-  return { isAuthenticated, isAdmin, isLoading, isHydrated };
+  return { isAuthenticated, isAdmin, isSuperAdmin, canAccessAdmin, isLoading, isHydrated, hasPermission };
 }
 
 /**

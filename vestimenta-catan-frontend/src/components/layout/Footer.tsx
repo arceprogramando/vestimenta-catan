@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { ShoppingBag, MapPin } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
 import { InstagramIcon, WhatsAppIcon, MercadoPagoIcon } from '@/components/icons/SocialIcons';
@@ -11,7 +12,13 @@ const WHATSAPP_MESSAGE = 'Hola buenas, estaria interesado en conocer mas acerca 
 const MERCADOPAGO_URL = 'https://link.mercadopago.com.ar/f12345678';
 
 export function Footer() {
+  const pathname = usePathname();
   const { isAuthenticated } = useAuth();
+
+  // No mostrar Footer en rutas de admin
+  if (pathname.startsWith('/admin')) {
+    return null;
+  }
 
   return (
     <footer className="border-t bg-background">

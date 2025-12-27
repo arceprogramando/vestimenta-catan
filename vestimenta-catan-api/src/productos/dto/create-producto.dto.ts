@@ -4,7 +4,6 @@ import {
   IsEnum,
   IsOptional,
   MaxLength,
-  IsUrl,
   IsNumber,
   Min,
 } from 'class-validator';
@@ -52,14 +51,14 @@ export class CreateProductoDto {
   genero: Genero;
 
   @ApiPropertyOptional({
-    description: 'URL de la imagen miniatura del producto',
-    example: 'https://example.com/images/camiseta-basica.jpg',
+    description: 'URL o path de la imagen miniatura del producto',
+    example: '/images/products/camiseta-basica.jpg',
     type: 'string',
-    format: 'uri',
   })
-  @IsUrl({}, { message: 'La URL de la imagen debe ser válida' })
+  @IsString({ message: 'El thumbnail debe ser una cadena de texto' })
+  @MaxLength(500, { message: 'El thumbnail no puede exceder 500 caracteres' })
   @IsOptional()
-  thumbnail?: string;
+  thumbnail?: string | null;
 
   @ApiPropertyOptional({
     description: 'Precio de venta del producto',

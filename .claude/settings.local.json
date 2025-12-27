@@ -22,7 +22,8 @@
       "Bash(git -C /d/dev/vestimenta-catan show cb78ba6 --name-only --oneline)",
       "Bash(git -C /d/dev/vestimenta-catan diff vestimenta-catan-api/package.json)",
       "Bash(pnpm run test:*)",
-      "Bash(git -C /d/dev/vestimenta-catan status)"
+      "Bash(git -C /d/dev/vestimenta-catan status)",
+      "Bash(git -C /d/dev/vestimenta-catan log -5 --oneline)"
     ]
   }
 }

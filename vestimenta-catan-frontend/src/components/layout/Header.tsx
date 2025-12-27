@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useState } from 'react';
-import { Menu, ShoppingBag, LogIn, LogOut } from 'lucide-react';
+import { Menu, ShoppingBag, LogIn, LogOut, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Sheet,
@@ -34,6 +34,11 @@ export function Header() {
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
   const { user, isAuthenticated, isHydrated, logout, fullName, isAdmin } = useAuth();
+
+  // No mostrar Header en rutas de admin (tiene su propio header)
+  if (pathname.startsWith('/admin')) {
+    return null;
+  }
 
   const isActive = (href: string) => {
     if (href === '/') return pathname === '/';
@@ -119,6 +124,17 @@ export function Header() {
                   <DropdownMenuItem asChild>
                     <Link href="/mis-reservas">Mis Reservas</Link>
                   </DropdownMenuItem>
+                  {isAdmin && (
+                    <>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem asChild>
+                        <Link href="/admin" className="flex items-center">
+                          <Settings className="mr-2 h-4 w-4" />
+                          Panel de Admin
+                        </Link>
+                      </DropdownMenuItem>
+                    </>
+                  )}
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
                     className="text-red-600 cursor-pointer"
@@ -207,6 +223,19 @@ export function Header() {
                     >
                       <Link href="/mis-reservas">Mis Reservas</Link>
                     </Button>
+                    {isAdmin && (
+                      <Button
+                        variant="default"
+                        className="w-full"
+                        asChild
+                        onClick={() => setIsOpen(false)}
+                      >
+                        <Link href="/admin">
+                          <Settings className="mr-2 h-4 w-4" />
+                          Panel de Admin
+                        </Link>
+                      </Button>
+                    )}
                     <Button
                       variant="destructive"
                       className="w-full"

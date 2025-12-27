@@ -10,6 +10,7 @@ interface StockResumenItem {
   genero: string;
   descripcion: string;
   thumbnail: string;
+  precio: number | null;
   stock_total: bigint;
 }
 
@@ -49,11 +50,12 @@ export class ProductosService {
         p.genero,
         p.descripcion,
         p.thumbnail,
+        p.precio,
         COALESCE(SUM(pv.cantidad), 0) as stock_total
       FROM productos p
       LEFT JOIN producto_variantes pv ON p.id = pv.producto_id AND pv.is_active = true
       WHERE p.is_active = true
-      GROUP BY p.id, p.nombre, p.genero, p.descripcion, p.thumbnail
+      GROUP BY p.id, p.nombre, p.genero, p.descripcion, p.thumbnail, p.precio
       ORDER BY stock_total DESC
     `;
 

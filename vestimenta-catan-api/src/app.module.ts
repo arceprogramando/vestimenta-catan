@@ -7,6 +7,7 @@ import { AppController, ApiController } from './app.controller';
 import { AppService } from './app.service';
 import { AuditModule } from './audit';
 import { AuthModule } from './auth/auth.module';
+import { DashboardModule } from './dashboard';
 import { HealthModule } from './health';
 import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
 import { RolesGuard } from './auth/guards/roles.guard';
@@ -41,6 +42,7 @@ import { UsuariosModule } from './usuarios/usuarios.module';
     HealthModule,
     AuditModule,
     AuthModule,
+    DashboardModule,
     UsuariosModule,
     ColoresModule,
     TallesModule,

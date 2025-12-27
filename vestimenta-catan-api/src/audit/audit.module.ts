@@ -7,14 +7,17 @@ import {
 } from '@nestjs/common';
 import { ScheduleModule } from '@nestjs/schedule';
 import { AuditService } from './audit.service';
+import { AuditController } from './audit.controller';
 import { AuditContextMiddleware } from './audit.middleware';
 import { setAuditService } from './audit.extension';
+import { PrismaModule } from '../prisma/prisma.module';
 
 /**
  * AuditModule - Módulo global de auditoría
  *
  * Provee:
  * - AuditService: Servicio para registrar y consultar logs
+ * - AuditController: Endpoints REST para consultar logs
  * - AuditContextMiddleware: Inyecta contexto de usuario en requests
  * - Integración con Prisma via extension
  *
@@ -23,7 +26,8 @@ import { setAuditService } from './audit.extension';
  */
 @Global()
 @Module({
-  imports: [ScheduleModule.forRoot()],
+  imports: [ScheduleModule.forRoot(), PrismaModule],
+  controllers: [AuditController],
   providers: [AuditService, AuditContextMiddleware],
   exports: [AuditService],
 })

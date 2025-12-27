@@ -1,9 +1,13 @@
+export type UserRole = 'user' | 'empleado' | 'admin' | 'superadmin';
+
 export interface User {
   id: number;
   email: string;
   nombre: string | null;
   apellido: string | null;
-  rol: 'user' | 'admin';
+  rol: UserRole;
+  rol_id?: number;
+  permisos?: string[];
   created_at: string;
   provider?: string;
   avatar_url?: string | null;

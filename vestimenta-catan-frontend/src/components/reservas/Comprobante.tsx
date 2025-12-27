@@ -52,7 +52,7 @@ export const Comprobante = forwardRef<HTMLDivElement, ComprobanteProps>(
     return (
       <div
         ref={ref}
-        className="bg-white text-black p-8 max-w-[800px] mx-auto"
+        className="bg-white text-black p-8 max-w-200 mx-auto"
         style={{ fontFamily: 'Arial, sans-serif' }}
       >
         {/* Header */}

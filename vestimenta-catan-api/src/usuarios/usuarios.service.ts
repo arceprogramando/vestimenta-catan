@@ -5,8 +5,10 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcrypt';
+import { Prisma, rol_usuario } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateUsuarioDto, UpdateUsuarioDto } from './dto';
+import { PaginatedResponse, createPaginatedResponse } from '../common/dto';
 
 // Tipo para usuario sanitizado (sin datos sensibles)
 export interface SanitizedUser {
@@ -160,6 +162,55 @@ export class UsuariosService {
     });
 
     return usuarios.map((u) => this.sanitizeUser(u));
+  }
+
+  /**
+   * Obtener todos los usuarios paginados con búsqueda (solo admin)
+   */
+  async findAllPaginated(params: {
+    limit?: number;
+    offset?: number;
+    search?: string;
+    rol?: rol_usuario;
+    includeInactive?: boolean;
+  }): Promise<PaginatedResponse<SanitizedUser>> {
+    const {
+      limit = 20,
+      offset = 0,
+      search,
+      rol,
+      includeInactive = false,
+    } = params;
+
+    const where: Prisma.usuariosWhereInput = {
+      ...(includeInactive ? {} : { is_active: true }),
+      ...(rol && { rol: rol }),
+      ...(search && {
+        OR: [
+          { email: { contains: search, mode: Prisma.QueryMode.insensitive } },
+          { nombre: { contains: search, mode: Prisma.QueryMode.insensitive } },
+          {
+            apellido: { contains: search, mode: Prisma.QueryMode.insensitive },
+          },
+        ],
+      }),
+    };
+
+    const [usuarios, total] = await Promise.all([
+      this.prisma.usuarios.findMany({
+        where,
+        orderBy: { created_at: 'desc' },
+        include: {
+          rol_ref: true,
+        },
+        take: limit,
+        skip: offset,
+      }),
+      this.prisma.usuarios.count({ where }),
+    ]);
+
+    const data = usuarios.map((u) => this.sanitizeUser(u));
+    return createPaginatedResponse(data, total, limit, offset);
   }
 
   /**

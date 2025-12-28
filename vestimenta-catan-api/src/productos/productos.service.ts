@@ -1,8 +1,10 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { Prisma, genero } from '@prisma/client';
 import { CreateProductoDto } from './dto/create-producto.dto';
 import { UpdateProductoDto } from './dto/update-producto.dto';
 import { SoftDeleteDto } from '../common/interfaces';
+import { PaginatedResponse, createPaginatedResponse } from '../common/dto';
 
 interface StockResumenItem {
   id: number;
@@ -32,6 +34,51 @@ export class ProductosService {
     });
 
     return productos;
+  }
+
+  // Paginación server-side con búsqueda
+  async findAllPaginated(params: {
+    limit?: number;
+    offset?: number;
+    search?: string;
+    genero?: genero;
+    includeDeleted?: boolean;
+  }): Promise<PaginatedResponse<Awaited<ReturnType<typeof this.findAll>>[0]>> {
+    const {
+      limit = 20,
+      offset = 0,
+      search,
+      genero: generoFilter,
+      includeDeleted = false,
+    } = params;
+
+    const where: Prisma.productosWhereInput = {
+      ...(includeDeleted ? {} : { is_active: true }),
+      ...(generoFilter && { genero: generoFilter }),
+      ...(search && {
+        OR: [
+          { nombre: { contains: search, mode: Prisma.QueryMode.insensitive } },
+          {
+            descripcion: {
+              contains: search,
+              mode: Prisma.QueryMode.insensitive,
+            },
+          },
+        ],
+      }),
+    };
+
+    const [productos, total] = await Promise.all([
+      this.prisma.productos.findMany({
+        where,
+        orderBy: { nombre: 'asc' },
+        take: limit,
+        skip: offset,
+      }),
+      this.prisma.productos.count({ where }),
+    ]);
+
+    return createPaginatedResponse(productos, total, limit, offset);
   }
 
   // Nuevo: Método para obtener productos eliminados

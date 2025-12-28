@@ -25,6 +25,7 @@ import { useRequireAdmin } from '@/hooks/use-auth';
 import { api } from '@/lib/axios';
 import { DataTable } from '@/components/ui/data-table';
 import { createColumns, Variante } from './columns';
+import type { PaginatedResponse } from '@/types/pagination';
 
 interface Producto {
   id: number;
@@ -42,14 +43,22 @@ interface Color {
   nombre: string;
 }
 
+const PAGE_SIZE = 20;
+
 export default function AdminStockPage() {
   const { isAdmin, isHydrated } = useRequireAdmin();
   const [variantes, setVariantes] = useState<Variante[]>([]);
+  const [totalRows, setTotalRows] = useState(0);
   const [productos, setProductos] = useState<Producto[]>([]);
   const [talles, setTalles] = useState<Talle[]>([]);
   const [colores, setColores] = useState<Color[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Paginación server-side
+  const [currentPage, setCurrentPage] = useState(0);
+  const [pageSize, setPageSize] = useState(PAGE_SIZE);
+  const [search, setSearch] = useState('');
 
   // Modal states
   const [modalOpen, setModalOpen] = useState(false);
@@ -66,19 +75,35 @@ export default function AdminStockPage() {
     cantidad: '0',
   });
 
-  const fetchData = useCallback(async () => {
+  // Fetch lookups (sin paginación)
+  const fetchLookups = useCallback(async () => {
     try {
-      setIsLoading(true);
-      const [variantesRes, productosRes, tallesRes, coloresRes] = await Promise.all([
-        api.get<Variante[]>('/producto-variantes'),
-        api.get<Producto[]>('/productos'),
+      const [productosRes, tallesRes, coloresRes] = await Promise.all([
+        api.get<PaginatedResponse<Producto>>('/productos'),
         api.get<Talle[]>('/talles'),
         api.get<Color[]>('/colores'),
       ]);
-      setVariantes(variantesRes.data);
-      setProductos(productosRes.data);
+      setProductos(productosRes.data.data);
       setTalles(tallesRes.data);
       setColores(coloresRes.data);
+    } catch (err) {
+      console.error('Error al cargar lookups:', err);
+    }
+  }, []);
+
+  // Fetch variantes con paginación
+  const fetchVariantes = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      const params = new URLSearchParams({
+        limit: String(pageSize),
+        offset: String(currentPage * pageSize),
+      });
+      if (search) params.set('search', search);
+
+      const response = await api.get<PaginatedResponse<Variante>>(`/producto-variantes?${params}`);
+      setVariantes(response.data.data);
+      setTotalRows(response.data.meta.total);
       setError(null);
     } catch (err) {
       setError('Error al cargar los datos');
@@ -86,13 +111,21 @@ export default function AdminStockPage() {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [currentPage, pageSize, search]);
 
+  // Initial load
   useEffect(() => {
     if (isAdmin && isHydrated) {
-      fetchData();
+      fetchLookups();
     }
-  }, [isAdmin, isHydrated, fetchData]);
+  }, [isAdmin, isHydrated, fetchLookups]);
+
+  // Fetch variantes cuando cambian los parámetros
+  useEffect(() => {
+    if (isAdmin && isHydrated) {
+      fetchVariantes();
+    }
+  }, [isAdmin, isHydrated, fetchVariantes]);
 
   const abrirModalCrear = () => {
     setVarianteEditar(null);
@@ -133,7 +166,7 @@ export default function AdminStockPage() {
       }
 
       setModalOpen(false);
-      fetchData();
+      fetchVariantes();
     } catch (err) {
       console.error('Error al guardar variante:', err);
     } finally {
@@ -149,7 +182,7 @@ export default function AdminStockPage() {
       await api.delete(`/producto-variantes/${varianteEliminar.id}`);
       setDeleteModalOpen(false);
       setVarianteEliminar(null);
-      fetchData();
+      fetchVariantes();
     } catch (err) {
       console.error('Error al eliminar variante:', err);
     } finally {
@@ -238,7 +271,7 @@ export default function AdminStockPage() {
           ) : error ? (
             <div className="text-center py-12">
               <p className="text-destructive mb-4">{error}</p>
-              <Button onClick={fetchData}>Reintentar</Button>
+              <Button onClick={fetchVariantes}>Reintentar</Button>
             </div>
           ) : variantes.length === 0 ? (
             <div className="text-center py-12">
@@ -249,9 +282,22 @@ export default function AdminStockPage() {
             <DataTable
               columns={columns}
               data={variantes}
-              searchKey="producto_nombre"
               searchPlaceholder="Buscar por producto, talle, color..."
               filterableColumns={filterableColumns}
+              serverSide
+              totalRows={totalRows}
+              currentPage={currentPage}
+              onPageChange={(page) => setCurrentPage(page)}
+              onPageSizeChange={(size) => {
+                setPageSize(size);
+                setCurrentPage(0);
+              }}
+              onSearchChange={(value) => {
+                setSearch(value);
+                setCurrentPage(0);
+              }}
+              isLoading={isLoading}
+              pageSize={pageSize}
             />
           )}
         </CardContent>
@@ -297,16 +343,16 @@ export default function AdminStockPage() {
                   <div className="space-y-2">
                     <Label>Talle</Label>
                     <Select
-                      value={formData.talle_id}
+                      value={formData.talle_id || 'none'}
                       onValueChange={(value) =>
-                        setFormData({ ...formData, talle_id: value })
+                        setFormData({ ...formData, talle_id: value === 'none' ? '' : value })
                       }
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Sin talle" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">Sin talle</SelectItem>
+                        <SelectItem value="none">Sin talle</SelectItem>
                         {talles.map((t) => (
                           <SelectItem key={t.id} value={t.id.toString()}>
                             {t.nombre}

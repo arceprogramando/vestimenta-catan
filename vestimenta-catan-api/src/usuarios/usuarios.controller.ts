@@ -21,6 +21,8 @@ import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { RequestUser } from '../auth/decorators/current-user.decorator';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { canManageRole } from '../auth/guards/roles.guard';
+import { rol_usuario } from '@prisma/client';
+import { PaginationQueryDto } from '../common/dto';
 import { CreateUsuarioDto, UpdateUsuarioDto } from './dto';
 import { UsuariosService } from './usuarios.service';
 
@@ -41,16 +43,34 @@ export class UsuariosController {
 
   @Get()
   @Roles('admin')
-  @ApiOperation({ summary: 'Obtener todos los usuarios (solo admin)' })
+  @ApiOperation({
+    summary: 'Obtener usuarios paginados con búsqueda (solo admin)',
+  })
   @ApiQuery({
     name: 'includeInactive',
     required: false,
     type: Boolean,
     description: 'Incluir usuarios inactivos',
   })
-  @ApiResponse({ status: 200, description: 'Lista de usuarios' })
-  findAll(@Query('includeInactive') includeInactive?: string) {
-    return this.usuariosService.findAll(includeInactive === 'true');
+  @ApiQuery({
+    name: 'rol',
+    required: false,
+    enum: ['user', 'admin', 'super_admin'],
+    description: 'Filtrar por rol',
+  })
+  @ApiResponse({ status: 200, description: 'Lista de usuarios paginada' })
+  findAll(
+    @Query() pagination: PaginationQueryDto,
+    @Query('includeInactive') includeInactive?: string,
+    @Query('rol') rol?: rol_usuario,
+  ) {
+    return this.usuariosService.findAllPaginated({
+      limit: pagination.limit,
+      offset: pagination.offset,
+      search: pagination.search,
+      rol,
+      includeInactive: includeInactive === 'true',
+    });
   }
 
   @Get('roles')

@@ -14,6 +14,7 @@ export function useReservas() {
     reservaActual: store.reservaActual,
     isLoading: store.isLoading,
     error: store.error,
+    meta: store.meta,
 
     // Actions
     fetchMisReservas: store.fetchMisReservas,

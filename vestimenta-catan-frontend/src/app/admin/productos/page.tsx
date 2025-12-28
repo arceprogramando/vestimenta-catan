@@ -24,14 +24,24 @@ import { Textarea } from '@/components/ui/textarea';
 import { Loader2, Plus, Package, AlertTriangle } from 'lucide-react';
 import { useRequireAdmin } from '@/hooks/use-auth';
 import { api } from '@/lib/axios';
+import { AxiosError } from 'axios';
 import { DataTable } from '@/components/ui/data-table';
 import { createColumns, Producto } from './columns';
+import type { PaginatedResponse } from '@/types/pagination';
+
+const PAGE_SIZE = 20;
 
 export default function AdminProductosPage() {
   const { isAdmin, isHydrated } = useRequireAdmin();
   const [productos, setProductos] = useState<Producto[]>([]);
+  const [totalRows, setTotalRows] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Paginación server-side
+  const [currentPage, setCurrentPage] = useState(0);
+  const [pageSize, setPageSize] = useState(PAGE_SIZE);
+  const [search, setSearch] = useState('');
 
   // Modal states
   const [modalOpen, setModalOpen] = useState(false);
@@ -39,6 +49,7 @@ export default function AdminProductosPage() {
   const [productoEditar, setProductoEditar] = useState<Producto | null>(null);
   const [productoEliminar, setProductoEliminar] = useState<Producto | null>(null);
   const [procesando, setProcesando] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -52,8 +63,15 @@ export default function AdminProductosPage() {
   const fetchProductos = useCallback(async () => {
     try {
       setIsLoading(true);
-      const response = await api.get<Producto[]>('/productos/stock-resumen');
-      setProductos(response.data);
+      const params = new URLSearchParams({
+        limit: String(pageSize),
+        offset: String(currentPage * pageSize),
+      });
+      if (search) params.set('search', search);
+
+      const response = await api.get<PaginatedResponse<Producto>>(`/productos?${params}`);
+      setProductos(response.data.data);
+      setTotalRows(response.data.meta.total);
       setError(null);
     } catch (err) {
       setError('Error al cargar los productos');
@@ -61,7 +79,7 @@ export default function AdminProductosPage() {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [currentPage, pageSize, search]);
 
   useEffect(() => {
     if (isAdmin && isHydrated) {
@@ -71,6 +89,7 @@ export default function AdminProductosPage() {
 
   const abrirModalCrear = () => {
     setProductoEditar(null);
+    setFormError(null);
     setFormData({
       nombre: '',
       descripcion: '',
@@ -83,6 +102,7 @@ export default function AdminProductosPage() {
 
   const abrirModalEditar = (producto: Producto) => {
     setProductoEditar(producto);
+    setFormError(null);
     setFormData({
       nombre: producto.nombre,
       descripcion: producto.descripcion || '',
@@ -95,6 +115,7 @@ export default function AdminProductosPage() {
 
   const handleSubmit = async () => {
     setProcesando(true);
+    setFormError(null);
     try {
       const payload = {
         nombre: formData.nombre,
@@ -114,6 +135,11 @@ export default function AdminProductosPage() {
       fetchProductos();
     } catch (err) {
       console.error('Error al guardar producto:', err);
+      if (err instanceof AxiosError && err.response?.data?.message) {
+        setFormError(err.response.data.message);
+      } else {
+        setFormError('Error al guardar el producto. Intenta nuevamente.');
+      }
     } finally {
       setProcesando(false);
     }
@@ -201,9 +227,22 @@ export default function AdminProductosPage() {
             <DataTable
               columns={columns}
               data={productos}
-              searchKey="nombre"
               searchPlaceholder="Buscar productos..."
               filterableColumns={filterableColumns}
+              serverSide
+              totalRows={totalRows}
+              currentPage={currentPage}
+              onPageChange={(page) => setCurrentPage(page)}
+              onPageSizeChange={(size) => {
+                setPageSize(size);
+                setCurrentPage(0);
+              }}
+              onSearchChange={(value) => {
+                setSearch(value);
+                setCurrentPage(0);
+              }}
+              isLoading={isLoading}
+              pageSize={pageSize}
             />
           )}
         </CardContent>
@@ -222,6 +261,12 @@ export default function AdminProductosPage() {
                 : 'Completa los datos para crear un nuevo producto'}
             </DialogDescription>
           </DialogHeader>
+          {formError && (
+            <div className="flex items-center gap-2 rounded-md border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
+              <AlertTriangle className="h-4 w-4 shrink-0" />
+              <span>{formError}</span>
+            </div>
+          )}
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <Label htmlFor="nombre">Nombre *</Label>

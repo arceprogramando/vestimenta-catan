@@ -4,9 +4,11 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { Prisma, genero } from '@prisma/client';
 import { CreateProductoVarianteDto } from './dto/create-producto-variante.dto';
 import { UpdateProductoVarianteDto } from './dto/update-producto-variante.dto';
 import { SoftDeleteDto } from '../common/interfaces';
+import { PaginatedResponse, createPaginatedResponse } from '../common/dto';
 
 // Interface para la variante con relaciones
 interface VarianteWithRelations {
@@ -72,6 +74,76 @@ export class ProductoVariantesService {
     });
 
     return variantes.map((variante) => this.serializeVariante(variante));
+  }
+
+  async findAllPaginated(params: {
+    limit?: number;
+    offset?: number;
+    search?: string;
+    genero?: genero;
+    productoId?: number;
+    colorId?: number;
+    talleId?: number;
+    stockBajo?: number;
+    includeDeleted?: boolean;
+  }): Promise<PaginatedResponse<ReturnType<typeof this.serializeVariante>>> {
+    const {
+      limit = 20,
+      offset = 0,
+      search,
+      genero: generoFilter,
+      productoId,
+      colorId,
+      talleId,
+      stockBajo,
+      includeDeleted = false,
+    } = params;
+
+    const where: Prisma.producto_variantesWhereInput = {
+      ...(includeDeleted ? {} : { is_active: true }),
+      ...(productoId && { producto_id: productoId }),
+      ...(colorId && { color_id: BigInt(colorId) }),
+      ...(talleId && { talle_id: BigInt(talleId) }),
+      ...(stockBajo !== undefined && { cantidad: { lte: stockBajo } }),
+      ...(generoFilter && { producto: { genero: generoFilter } }),
+      ...(search && {
+        OR: [
+          {
+            producto: {
+              nombre: { contains: search, mode: Prisma.QueryMode.insensitive },
+            },
+          },
+          {
+            color: {
+              nombre: { contains: search, mode: Prisma.QueryMode.insensitive },
+            },
+          },
+          {
+            talle: {
+              nombre: { contains: search, mode: Prisma.QueryMode.insensitive },
+            },
+          },
+        ],
+      }),
+    };
+
+    const [variantes, total] = await Promise.all([
+      this.prisma.producto_variantes.findMany({
+        where,
+        include: {
+          producto: true,
+          color: true,
+          talle: true,
+        },
+        orderBy: { created_at: 'desc' },
+        take: limit,
+        skip: offset,
+      }),
+      this.prisma.producto_variantes.count({ where }),
+    ]);
+
+    const data = variantes.map((variante) => this.serializeVariante(variante));
+    return createPaginatedResponse(data, total, limit, offset);
   }
 
   async findByProducto(productoId: number) {

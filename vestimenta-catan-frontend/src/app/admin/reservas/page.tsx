@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -33,6 +33,10 @@ import {
   Search,
   Filter,
   Printer,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
 } from 'lucide-react';
 import { useRequireAdmin } from '@/hooks/use-auth';
 import { useReservas } from '@/hooks/use-reservas';
@@ -74,20 +78,27 @@ const formatFecha = (fecha: string) => {
   });
 };
 
+const PAGE_SIZE = 10;
+
 export default function AdminReservasPage() {
   const { isAdmin, isHydrated } = useRequireAdmin();
   const {
     reservas,
     isLoading,
     error,
+    meta,
     fetchAllReservas,
     confirmarReserva,
     completarReserva,
     cancelarReserva,
   } = useReservas();
 
+  // Paginación server-side
+  const [currentPage, setCurrentPage] = useState(0);
+  const [pageSize, setPageSize] = useState(PAGE_SIZE);
   const [filtroEstado, setFiltroEstado] = useState<string>('todos');
   const [busqueda, setBusqueda] = useState('');
+  const [searchInput, setSearchInput] = useState('');
   const [cancelModalOpen, setCancelModalOpen] = useState(false);
   const [reservaACancelar, setReservaACancelar] = useState<Reserva | null>(null);
   const [motivoCancelacion, setMotivoCancelacion] = useState('');
@@ -95,36 +106,56 @@ export default function AdminReservasPage() {
   const [comprobanteModalOpen, setComprobanteModalOpen] = useState(false);
   const [reservaComprobante, setReservaComprobante] = useState<Reserva | null>(null);
   const comprobanteRef = useRef<HTMLDivElement>(null);
+  const searchTimeoutRef = useRef<NodeJS.Timeout>();
+
+  // Fetch con parámetros server-side
+  const fetchData = useCallback(() => {
+    if (!isAdmin || !isHydrated) return;
+
+    fetchAllReservas({
+      limit: pageSize,
+      offset: currentPage * pageSize,
+      search: busqueda || undefined,
+      estado: filtroEstado !== 'todos' ? filtroEstado as EstadoReserva : undefined,
+    });
+  }, [isAdmin, isHydrated, fetchAllReservas, currentPage, pageSize, busqueda, filtroEstado]);
 
   useEffect(() => {
-    if (isAdmin && isHydrated) {
-      fetchAllReservas();
+    fetchData();
+  }, [fetchData]);
+
+  // Debounce para búsqueda
+  const handleSearchChange = (value: string) => {
+    setSearchInput(value);
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
     }
-  }, [isAdmin, isHydrated, fetchAllReservas]);
+    searchTimeoutRef.current = setTimeout(() => {
+      setBusqueda(value);
+      setCurrentPage(0); // Reset a primera página
+    }, 300);
+  };
 
-  const reservasFiltradas = reservas.filter((reserva) => {
-    // Filtro por estado
-    if (filtroEstado !== 'todos' && reserva.estado !== filtroEstado) {
-      return false;
-    }
+  // Cleanup timeout
+  useEffect(() => {
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
+    };
+  }, []);
 
-    // Filtro por busqueda
-    if (busqueda) {
-      const searchLower = busqueda.toLowerCase();
-      const producto = reserva.variante?.producto;
-      const usuario = reserva.usuario;
+  // Reset página cuando cambia el filtro de estado
+  const handleEstadoChange = (value: string) => {
+    setFiltroEstado(value);
+    setCurrentPage(0);
+  };
 
-      return (
-        reserva.id.toString().includes(searchLower) ||
-        (producto?.nombre?.toLowerCase().includes(searchLower) ?? false) ||
-        (usuario?.email?.toLowerCase().includes(searchLower) ?? false) ||
-        (usuario?.nombre?.toLowerCase().includes(searchLower) ?? false) ||
-        (usuario?.apellido?.toLowerCase().includes(searchLower) ?? false)
-      );
-    }
-
-    return true;
-  });
+  // Paginación helpers
+  const totalRows = meta?.total ?? 0;
+  const pageCount = Math.ceil(totalRows / pageSize);
+  const canPreviousPage = currentPage > 0;
+  const canNextPage = currentPage < pageCount - 1;
 
   const handleConfirmar = async (id: number) => {
     setProcesando(id);
@@ -257,12 +288,12 @@ export default function AdminReservasPage() {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Buscar por ID, producto, cliente..."
-            value={busqueda}
-            onChange={(e) => setBusqueda(e.target.value)}
+            value={searchInput}
+            onChange={(e) => handleSearchChange(e.target.value)}
             className="pl-10"
           />
         </div>
-        <Select value={filtroEstado} onValueChange={setFiltroEstado}>
+        <Select value={filtroEstado} onValueChange={handleEstadoChange}>
           <SelectTrigger className="w-full ssm:w-45">
             <Filter className="mr-2 h-4 w-4" />
             <SelectValue placeholder="Filtrar por estado" />
@@ -290,7 +321,7 @@ export default function AdminReservasPage() {
             <Button onClick={() => fetchAllReservas()}>Reintentar</Button>
           </CardContent>
         </Card>
-      ) : reservasFiltradas.length === 0 ? (
+      ) : reservas.length === 0 ? (
         <Card className="text-center py-12">
           <CardContent>
             <Package className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
@@ -304,7 +335,7 @@ export default function AdminReservasPage() {
         </Card>
       ) : (
         <div className="space-y-4">
-          {reservasFiltradas.map((reserva) => {
+          {reservas.map((reserva) => {
             const config = estadoConfig[reserva.estado];
             const producto = reserva.variante?.producto;
             const talle = reserva.variante?.talle;
@@ -492,6 +523,77 @@ export default function AdminReservasPage() {
               </Card>
             );
           })}
+
+          {/* Paginación */}
+          {totalRows > 0 && (
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between pt-4">
+              <div className="text-sm text-muted-foreground">
+                Mostrando {currentPage * pageSize + 1} a{' '}
+                {Math.min((currentPage + 1) * pageSize, totalRows)} de {totalRows} pedidos
+              </div>
+              <div className="flex items-center gap-2">
+                <Select
+                  value={`${pageSize}`}
+                  onValueChange={(value) => {
+                    setPageSize(Number(value));
+                    setCurrentPage(0);
+                  }}
+                >
+                  <SelectTrigger className="h-8 w-[70px]">
+                    <SelectValue placeholder={pageSize} />
+                  </SelectTrigger>
+                  <SelectContent side="top">
+                    {[10, 20, 30, 50].map((size) => (
+                      <SelectItem key={size} value={`${size}`}>
+                        {size}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <div className="flex items-center gap-1">
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={() => setCurrentPage(0)}
+                    disabled={!canPreviousPage || isLoading}
+                  >
+                    <ChevronsLeft className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={() => setCurrentPage((p) => p - 1)}
+                    disabled={!canPreviousPage || isLoading}
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                  <span className="text-sm px-2">
+                    {currentPage + 1} / {pageCount || 1}
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={() => setCurrentPage((p) => p + 1)}
+                    disabled={!canNextPage || isLoading}
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={() => setCurrentPage(pageCount - 1)}
+                    disabled={!canNextPage || isLoading}
+                  >
+                    <ChevronsRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
 

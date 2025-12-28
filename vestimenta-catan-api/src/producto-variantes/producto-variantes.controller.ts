@@ -6,6 +6,7 @@ import {
   Patch,
   Param,
   Delete,
+  Query,
   ParseIntPipe,
   NotFoundException,
 } from '@nestjs/common';
@@ -16,12 +17,15 @@ import {
   ApiResponse,
   ApiParam,
   ApiBody,
+  ApiQuery,
 } from '@nestjs/swagger';
 import { Public } from '../auth/decorators/public.decorator';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { ProductoVariantesService } from './producto-variantes.service';
+import { PaginationQueryDto } from '../common/dto';
 import { CreateProductoVarianteDto } from './dto/create-producto-variante.dto';
 import { UpdateProductoVarianteDto } from './dto/update-producto-variante.dto';
+import { genero } from '@prisma/client';
 
 @ApiTags('producto-variantes')
 @ApiBearerAuth()
@@ -49,16 +53,62 @@ export class ProductoVariantesController {
   @Get()
   @Public()
   @ApiOperation({
-    summary: 'Obtener todas las variantes de productos (Stock detallado)',
+    summary: 'Obtener variantes de productos paginadas (Stock detallado)',
     description:
-      'Retorna las variantes de productos con stock específico por talle y color.',
+      'Retorna las variantes de productos con stock específico por talle y color, con paginación y búsqueda.',
+  })
+  @ApiQuery({
+    name: 'genero',
+    required: false,
+    enum: ['mujer', 'hombre', 'ninios'],
+    description: 'Filtrar por género del producto',
+  })
+  @ApiQuery({
+    name: 'productoId',
+    required: false,
+    type: Number,
+    description: 'Filtrar por ID de producto',
+  })
+  @ApiQuery({
+    name: 'colorId',
+    required: false,
+    type: Number,
+    description: 'Filtrar por ID de color',
+  })
+  @ApiQuery({
+    name: 'talleId',
+    required: false,
+    type: Number,
+    description: 'Filtrar por ID de talle',
+  })
+  @ApiQuery({
+    name: 'stockBajo',
+    required: false,
+    type: Number,
+    description: 'Filtrar variantes con stock menor o igual a este valor',
   })
   @ApiResponse({
     status: 200,
-    description: 'Lista completa de variantes con stock detallado.',
+    description: 'Lista paginada de variantes con stock detallado.',
   })
-  findAll() {
-    return this.productoVariantesService.findAll();
+  findAll(
+    @Query() pagination: PaginationQueryDto,
+    @Query('genero') generoFilter?: genero,
+    @Query('productoId', new ParseIntPipe({ optional: true }))
+    productoId?: number,
+    @Query('colorId', new ParseIntPipe({ optional: true })) colorId?: number,
+    @Query('talleId', new ParseIntPipe({ optional: true })) talleId?: number,
+    @Query('stockBajo', new ParseIntPipe({ optional: true }))
+    stockBajo?: number,
+  ) {
+    return this.productoVariantesService.findAllPaginated({
+      ...pagination,
+      genero: generoFilter,
+      productoId,
+      colorId,
+      talleId,
+      stockBajo,
+    });
   }
 
   @Get(':id')

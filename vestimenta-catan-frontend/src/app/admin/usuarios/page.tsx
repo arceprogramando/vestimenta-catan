@@ -25,6 +25,9 @@ import { useRequireAdmin, useAuth } from '@/hooks/use-auth';
 import { api } from '@/lib/axios';
 import { DataTable } from '@/components/ui/data-table';
 import { createColumns, Usuario } from './columns';
+import type { PaginatedResponse } from '@/types/pagination';
+
+const PAGE_SIZE = 20;
 
 const rolConfig: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
   superadmin: { label: 'Super Admin', variant: 'destructive' },
@@ -37,8 +40,14 @@ export default function AdminUsuariosPage() {
   const { isAdmin, isHydrated } = useRequireAdmin();
   const { isSuperAdmin, user: currentUser } = useAuth();
   const [usuarios, setUsuarios] = useState<Usuario[]>([]);
+  const [totalRows, setTotalRows] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Paginación server-side
+  const [currentPage, setCurrentPage] = useState(0);
+  const [pageSize, setPageSize] = useState(PAGE_SIZE);
+  const [search, setSearch] = useState('');
 
   // Modal states
   const [modalOpen, setModalOpen] = useState(false);
@@ -64,8 +73,15 @@ export default function AdminUsuariosPage() {
   const fetchUsuarios = useCallback(async () => {
     try {
       setIsLoading(true);
-      const response = await api.get<Usuario[]>('/usuarios');
-      setUsuarios(response.data);
+      const params = new URLSearchParams({
+        limit: String(pageSize),
+        offset: String(currentPage * pageSize),
+      });
+      if (search) params.set('search', search);
+
+      const response = await api.get<PaginatedResponse<Usuario>>(`/usuarios?${params}`);
+      setUsuarios(response.data.data);
+      setTotalRows(response.data.meta.total);
       setError(null);
     } catch (err) {
       setError('Error al cargar los usuarios');
@@ -73,7 +89,7 @@ export default function AdminUsuariosPage() {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [currentPage, pageSize, search]);
 
   useEffect(() => {
     if (isAdmin && isHydrated) {
@@ -199,9 +215,22 @@ export default function AdminUsuariosPage() {
             <DataTable
               columns={columns}
               data={usuarios}
-              searchKey="nombre"
               searchPlaceholder="Buscar por nombre o email..."
               filterableColumns={filterableColumns}
+              serverSide
+              totalRows={totalRows}
+              currentPage={currentPage}
+              onPageChange={(page) => setCurrentPage(page)}
+              onPageSizeChange={(size) => {
+                setPageSize(size);
+                setCurrentPage(0);
+              }}
+              onSearchChange={(value) => {
+                setSearch(value);
+                setCurrentPage(0);
+              }}
+              isLoading={isLoading}
+              pageSize={pageSize}
             />
           )}
         </CardContent>

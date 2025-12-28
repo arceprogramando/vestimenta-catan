@@ -51,6 +51,14 @@ interface DataTableProps<TData, TValue> {
     options: { label: string; value: string }[]
   }[]
   pageSize?: number
+  // Server-side pagination props
+  serverSide?: boolean
+  totalRows?: number
+  currentPage?: number
+  onPageChange?: (page: number) => void
+  onPageSizeChange?: (pageSize: number) => void
+  onSearchChange?: (search: string) => void
+  isLoading?: boolean
 }
 
 export function DataTable<TData, TValue>({
@@ -59,12 +67,53 @@ export function DataTable<TData, TValue>({
   searchKey,
   searchPlaceholder = "Buscar...",
   filterableColumns = [],
-  pageSize = 10,
+  pageSize: initialPageSize = 10,
+  // Server-side props
+  serverSide = false,
+  totalRows = 0,
+  currentPage = 0,
+  onPageChange,
+  onPageSizeChange,
+  onSearchChange,
+  isLoading = false,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = React.useState<SortingState>([])
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([])
   const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({})
   const [rowSelection, setRowSelection] = React.useState({})
+  const [localPageSize, setLocalPageSize] = React.useState(initialPageSize)
+  const [searchValue, setSearchValue] = React.useState("")
+
+  // Debounce para búsqueda server-side
+  const searchTimeoutRef = React.useRef<NodeJS.Timeout>()
+
+  const handleSearchChange = React.useCallback((value: string) => {
+    setSearchValue(value)
+    if (serverSide && onSearchChange) {
+      // Clear previous timeout
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current)
+      }
+      // Debounce 300ms
+      searchTimeoutRef.current = setTimeout(() => {
+        onSearchChange(value)
+        onPageChange?.(0) // Reset to first page on search
+      }, 300)
+    }
+  }, [serverSide, onSearchChange, onPageChange])
+
+  // Cleanup timeout on unmount
+  React.useEffect(() => {
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current)
+      }
+    }
+  }, [])
+
+  const pageCount = serverSide
+    ? Math.ceil(totalRows / localPageSize)
+    : undefined
 
   const table = useReactTable({
     data,
@@ -72,23 +121,85 @@ export function DataTable<TData, TValue>({
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
     getCoreRowModel: getCoreRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
+    getPaginationRowModel: serverSide ? undefined : getPaginationRowModel(),
+    getSortedRowModel: serverSide ? undefined : getSortedRowModel(),
+    getFilteredRowModel: serverSide ? undefined : getFilteredRowModel(),
     onColumnVisibilityChange: setColumnVisibility,
     onRowSelectionChange: setRowSelection,
+    manualPagination: serverSide,
+    manualFiltering: serverSide,
+    pageCount: serverSide ? pageCount : undefined,
     state: {
       sorting,
       columnFilters,
       columnVisibility,
       rowSelection,
+      ...(serverSide && {
+        pagination: {
+          pageIndex: currentPage,
+          pageSize: localPageSize,
+        },
+      }),
     },
     initialState: {
       pagination: {
-        pageSize,
+        pageSize: initialPageSize,
       },
     },
   })
+
+  // Handlers para server-side
+  const handlePageSizeChange = (size: number) => {
+    setLocalPageSize(size)
+    if (serverSide) {
+      onPageSizeChange?.(size)
+      onPageChange?.(0) // Reset to first page
+    } else {
+      table.setPageSize(size)
+    }
+  }
+
+  const handlePreviousPage = () => {
+    if (serverSide) {
+      onPageChange?.(currentPage - 1)
+    } else {
+      table.previousPage()
+    }
+  }
+
+  const handleNextPage = () => {
+    if (serverSide) {
+      onPageChange?.(currentPage + 1)
+    } else {
+      table.nextPage()
+    }
+  }
+
+  const handleFirstPage = () => {
+    if (serverSide) {
+      onPageChange?.(0)
+    } else {
+      table.setPageIndex(0)
+    }
+  }
+
+  const handleLastPage = () => {
+    if (serverSide) {
+      onPageChange?.((pageCount || 1) - 1)
+    } else {
+      table.setPageIndex(table.getPageCount() - 1)
+    }
+  }
+
+  const canPreviousPage = serverSide ? currentPage > 0 : table.getCanPreviousPage()
+  const canNextPage = serverSide
+    ? currentPage < (pageCount || 1) - 1
+    : table.getCanNextPage()
+
+  const displayedPageIndex = serverSide ? currentPage : table.getState().pagination.pageIndex
+  const displayedPageSize = serverSide ? localPageSize : table.getState().pagination.pageSize
+  const displayedPageCount = serverSide ? (pageCount || 1) : (table.getPageCount() || 1)
+  const displayedTotalRows = serverSide ? totalRows : table.getFilteredRowModel().rows.length
 
   const hasActiveFilters = columnFilters.length > 0
 
@@ -96,15 +207,19 @@ export function DataTable<TData, TValue>({
     <div className="space-y-4">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex flex-1 flex-col gap-2 sm:flex-row sm:items-center">
-          {searchKey && (
+          {(searchKey || (serverSide && onSearchChange)) && (
             <div className="relative w-full sm:w-64">
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder={searchPlaceholder}
-                value={(table.getColumn(searchKey)?.getFilterValue() as string) ?? ""}
-                onChange={(event) =>
-                  table.getColumn(searchKey)?.setFilterValue(event.target.value)
-                }
+                value={serverSide ? searchValue : (table.getColumn(searchKey!)?.getFilterValue() as string) ?? ""}
+                onChange={(event) => {
+                  if (serverSide) {
+                    handleSearchChange(event.target.value)
+                  } else if (searchKey) {
+                    table.getColumn(searchKey)?.setFilterValue(event.target.value)
+                  }
+                }}
                 className="pl-8"
               />
             </div>
@@ -199,7 +314,16 @@ export function DataTable<TData, TValue>({
             ))}
           </TableHeader>
           <TableBody>
-            {table.getRowModel().rows?.length ? (
+            {isLoading ? (
+              <TableRow>
+                <TableCell colSpan={columns.length} className="h-24 text-center">
+                  <div className="flex items-center justify-center gap-2">
+                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                    <span className="text-muted-foreground">Cargando...</span>
+                  </div>
+                </TableCell>
+              </TableRow>
+            ) : table.getRowModel().rows?.length ? (
               table.getRowModel().rows.map((row) => (
                 <TableRow
                   key={row.id}
@@ -225,22 +349,20 @@ export function DataTable<TData, TValue>({
 
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="text-sm text-muted-foreground">
-          Mostrando {table.getState().pagination.pageIndex * table.getState().pagination.pageSize + 1} a{" "}
+          Mostrando {displayedPageIndex * displayedPageSize + 1} a{" "}
           {Math.min(
-            (table.getState().pagination.pageIndex + 1) * table.getState().pagination.pageSize,
-            table.getFilteredRowModel().rows.length
+            (displayedPageIndex + 1) * displayedPageSize,
+            displayedTotalRows
           )}{" "}
-          de {table.getFilteredRowModel().rows.length} registros
+          de {displayedTotalRows} registros
         </div>
         <div className="flex items-center gap-2">
           <Select
-            value={`${table.getState().pagination.pageSize}`}
-            onValueChange={(value) => {
-              table.setPageSize(Number(value))
-            }}
+            value={`${displayedPageSize}`}
+            onValueChange={(value) => handlePageSizeChange(Number(value))}
           >
             <SelectTrigger className="h-8 w-[70px]">
-              <SelectValue placeholder={table.getState().pagination.pageSize} />
+              <SelectValue placeholder={displayedPageSize} />
             </SelectTrigger>
             <SelectContent side="top">
               {[10, 20, 30, 50, 100].map((size) => (
@@ -255,8 +377,8 @@ export function DataTable<TData, TValue>({
               variant="outline"
               size="icon"
               className="h-8 w-8"
-              onClick={() => table.setPageIndex(0)}
-              disabled={!table.getCanPreviousPage()}
+              onClick={handleFirstPage}
+              disabled={!canPreviousPage || isLoading}
             >
               <ChevronsLeft className="h-4 w-4" />
             </Button>
@@ -264,20 +386,20 @@ export function DataTable<TData, TValue>({
               variant="outline"
               size="icon"
               className="h-8 w-8"
-              onClick={() => table.previousPage()}
-              disabled={!table.getCanPreviousPage()}
+              onClick={handlePreviousPage}
+              disabled={!canPreviousPage || isLoading}
             >
               <ChevronLeft className="h-4 w-4" />
             </Button>
             <span className="text-sm px-2">
-              {table.getState().pagination.pageIndex + 1} / {table.getPageCount() || 1}
+              {displayedPageIndex + 1} / {displayedPageCount}
             </span>
             <Button
               variant="outline"
               size="icon"
               className="h-8 w-8"
-              onClick={() => table.nextPage()}
-              disabled={!table.getCanNextPage()}
+              onClick={handleNextPage}
+              disabled={!canNextPage || isLoading}
             >
               <ChevronRight className="h-4 w-4" />
             </Button>
@@ -285,8 +407,8 @@ export function DataTable<TData, TValue>({
               variant="outline"
               size="icon"
               className="h-8 w-8"
-              onClick={() => table.setPageIndex(table.getPageCount() - 1)}
-              disabled={!table.getCanNextPage()}
+              onClick={handleLastPage}
+              disabled={!canNextPage || isLoading}
             >
               <ChevronsRight className="h-4 w-4" />
             </Button>

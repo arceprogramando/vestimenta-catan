@@ -6,6 +6,7 @@ import {
   Patch,
   Param,
   Delete,
+  Query,
   ParseIntPipe,
   NotFoundException,
 } from '@nestjs/common';
@@ -16,7 +17,10 @@ import {
   ApiResponse,
   ApiParam,
   ApiBody,
+  ApiQuery,
 } from '@nestjs/swagger';
+import { genero } from '@prisma/client';
+import { PaginationQueryDto } from '../common/dto';
 import { Public } from '../auth/decorators/public.decorator';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { ProductosService } from './productos.service';
@@ -105,40 +109,36 @@ export class ProductosController {
   @Get()
   @Public()
   @ApiOperation({
-    summary: 'Obtener todos los productos base del inventario',
+    summary: 'Obtener productos paginados con búsqueda y filtros',
     description:
-      'Retorna la lista de productos BASE registrados en el sistema (5 productos actualmente). Estos son los productos principales sin variantes. Para ver el stock detallado por talle y color, usar el endpoint /api/producto-variantes. Para ver el stock total agregado, usar /api/productos/stock-resumen.',
+      'Retorna la lista de productos BASE paginada con soporte para búsqueda y filtro por género. Para ver el stock detallado por talle y color, usar el endpoint /api/producto-variantes. Para ver el stock total agregado, usar /api/productos/stock-resumen.',
+  })
+  @ApiQuery({
+    name: 'genero',
+    required: false,
+    enum: ['mujer', 'hombre', 'ninios'],
+    description: 'Filtrar por género',
+  })
+  @ApiQuery({
+    name: 'includeDeleted',
+    required: false,
+    type: Boolean,
+    description: 'Incluir productos eliminados',
   })
   @ApiResponse({
     status: 200,
-    description:
-      'Lista de productos base obtenida exitosamente. Total actual: 5 productos con 233 unidades totales en stock.',
-    schema: {
-      type: 'array',
-      example: [
-        {
-          id: 1,
-          nombre: 'remera térmica',
-          descripcion: 'Remera térmica para mujer.',
-          genero: 'mujer',
-          thumbnail: '/images/products/remera-termica-mujer-1.jpeg',
-          created_at: '2025-08-16T04:21:58.219Z',
-          updated_at: '2025-08-16T04:21:58.219Z',
-        },
-        {
-          id: 2,
-          nombre: 'remera térmica',
-          descripcion: 'Remera térmica para hombre.',
-          genero: 'hombre',
-          thumbnail: '/images/products/remera-termica-hombre-1.jpeg',
-          created_at: '2025-08-16T04:21:58.219Z',
-          updated_at: '2025-08-16T04:21:58.219Z',
-        },
-      ],
-    },
+    description: 'Lista de productos paginada con metadatos.',
   })
-  findAll() {
-    return this.productosService.findAll();
+  findAll(
+    @Query() pagination: PaginationQueryDto,
+    @Query('genero') generoFilter?: genero,
+    @Query('includeDeleted') includeDeleted?: string,
+  ) {
+    return this.productosService.findAllPaginated({
+      ...pagination,
+      genero: generoFilter,
+      includeDeleted: includeDeleted === 'true',
+    });
   }
 
   @Get('stock-resumen')

@@ -1,7 +1,15 @@
 import { create } from 'zustand';
 import { api } from '@/lib/axios';
-import type { Reserva, CreateReservaDto, UpdateReservaDto } from '@/types/reserva';
+import type { Reserva, CreateReservaDto, UpdateReservaDto, EstadoReserva } from '@/types/reserva';
+import type { PaginatedResponse, PaginationMeta } from '@/types/pagination';
 import { AxiosError } from 'axios';
+
+interface FetchAllParams {
+  limit?: number;
+  offset?: number;
+  search?: string;
+  estado?: EstadoReserva;
+}
 
 interface ReservasStore {
   // State
@@ -9,10 +17,12 @@ interface ReservasStore {
   reservaActual: Reserva | null;
   isLoading: boolean;
   error: string | null;
+  // Paginación
+  meta: PaginationMeta | null;
 
   // Actions
   fetchMisReservas: () => Promise<void>;
-  fetchAllReservas: () => Promise<Reserva[]>;
+  fetchAllReservas: (params?: FetchAllParams) => Promise<Reserva[]>;
   fetchReserva: (id: number) => Promise<Reserva | null>;
   createReserva: (data: CreateReservaDto) => Promise<Reserva>;
   updateReserva: (id: number, data: UpdateReservaDto) => Promise<Reserva>;
@@ -29,6 +39,7 @@ export const useReservasStore = create<ReservasStore>((set, get) => ({
   reservaActual: null,
   isLoading: false,
   error: null,
+  meta: null,
 
   fetchMisReservas: async () => {
     set({ isLoading: true, error: null });
@@ -51,22 +62,33 @@ export const useReservasStore = create<ReservasStore>((set, get) => ({
     }
   },
 
-  fetchAllReservas: async () => {
+  fetchAllReservas: async (params?: FetchAllParams) => {
     set({ isLoading: true, error: null });
 
     try {
-      const response = await api.get<Reserva[]>('/reservas');
+      const searchParams = new URLSearchParams();
+      if (params?.limit) searchParams.set('limit', String(params.limit));
+      if (params?.offset) searchParams.set('offset', String(params.offset));
+      if (params?.search) searchParams.set('search', params.search);
+      if (params?.estado) searchParams.set('estado', params.estado);
+
+      const queryString = searchParams.toString();
+      const url = queryString ? `/reservas?${queryString}` : '/reservas';
+
+      const response = await api.get<PaginatedResponse<Reserva>>(url);
       set({
-        reservas: response.data,
+        reservas: response.data.data,
+        meta: response.data.meta,
         isLoading: false,
       });
-      return response.data;
+      return response.data.data;
     } catch (error) {
       const axiosError = error as AxiosError<{ message: string }>;
       const message = axiosError.response?.data?.message || 'Error al cargar reservas';
 
       set({
         reservas: [],
+        meta: null,
         isLoading: false,
         error: message,
       });

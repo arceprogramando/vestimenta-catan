@@ -6,9 +6,10 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateReservaDto } from './dto/create-reserva.dto';
 import { UpdateReservaDto } from './dto/update-reserva.dto';
-import { estado_reserva } from '@prisma/client';
+import { estado_reserva, Prisma } from '@prisma/client';
 import { SoftDeleteDto } from '../common/interfaces';
 import { DecimalLike } from '../common/types';
+import { PaginatedResponse, createPaginatedResponse } from '../common/dto';
 
 // Interface para datos de actualización de reserva
 interface ReservaUpdateData {
@@ -173,6 +174,95 @@ export class ReservasService {
     });
 
     return reservas.map((reserva) => this.serializeReserva(reserva));
+  }
+
+  async findAllPaginated(params: {
+    limit?: number;
+    offset?: number;
+    search?: string;
+    estado?: estado_reserva;
+    includeDeleted?: boolean;
+  }): Promise<PaginatedResponse<ReturnType<typeof this.serializeReserva>>> {
+    const {
+      limit = 20,
+      offset = 0,
+      search,
+      estado,
+      includeDeleted = false,
+    } = params;
+
+    const where: Prisma.reservasWhereInput = {
+      ...(includeDeleted ? {} : { is_active: true }),
+      ...(estado && { estado }),
+      ...(search && {
+        OR: [
+          { notas: { contains: search, mode: Prisma.QueryMode.insensitive } },
+          {
+            telefono_contacto: {
+              contains: search,
+              mode: Prisma.QueryMode.insensitive,
+            },
+          },
+          {
+            usuario: {
+              OR: [
+                {
+                  email: {
+                    contains: search,
+                    mode: Prisma.QueryMode.insensitive,
+                  },
+                },
+                {
+                  nombre: {
+                    contains: search,
+                    mode: Prisma.QueryMode.insensitive,
+                  },
+                },
+                {
+                  apellido: {
+                    contains: search,
+                    mode: Prisma.QueryMode.insensitive,
+                  },
+                },
+              ],
+            },
+          },
+          {
+            variante: {
+              producto: {
+                nombre: {
+                  contains: search,
+                  mode: Prisma.QueryMode.insensitive,
+                },
+              },
+            },
+          },
+        ],
+      }),
+    };
+
+    const [reservas, total] = await Promise.all([
+      this.prisma.reservas.findMany({
+        where,
+        include: {
+          variante: {
+            include: {
+              producto: true,
+              talle: true,
+              color: true,
+            },
+          },
+          usuario: true,
+        },
+        orderBy: { fecha_reserva: 'desc' },
+        take: limit,
+        skip: offset,
+      }),
+      this.prisma.reservas.count({ where }),
+    ]);
+
+    const data = reservas.map((reserva) => this.serializeReserva(reserva));
+    return createPaginatedResponse(data, total, limit, offset);
   }
 
   async findByUsuario(usuarioId: number) {

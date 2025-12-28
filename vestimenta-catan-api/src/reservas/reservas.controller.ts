@@ -24,8 +24,10 @@ import type { RequestUser } from '../auth/decorators/current-user.decorator';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { ReservasService } from './reservas.service';
 import type { SoftDeleteDto } from '../common/interfaces';
+import { PaginationQueryDto } from '../common/dto';
 import { CreateReservaDto } from './dto/create-reserva.dto';
 import { UpdateReservaDto } from './dto/update-reserva.dto';
+import { estado_reserva } from '@prisma/client';
 
 @ApiTags('reservas')
 @ApiBearerAuth()
@@ -57,16 +59,32 @@ export class ReservasController {
 
   @Get()
   @Roles('admin')
-  @ApiOperation({ summary: 'Obtener todas las reservas (solo admin)' })
+  @ApiOperation({
+    summary: 'Obtener todas las reservas paginadas (solo admin)',
+  })
   @ApiQuery({
     name: 'includeDeleted',
     required: false,
     type: Boolean,
     description: 'Incluir reservas eliminadas',
   })
-  @ApiResponse({ status: 200, description: 'Lista de reservas.' })
-  findAll(@Query('includeDeleted') includeDeleted?: string) {
-    return this.reservasService.findAll(includeDeleted === 'true');
+  @ApiQuery({
+    name: 'estado',
+    required: false,
+    enum: ['pendiente', 'confirmado', 'cancelado', 'completado'],
+    description: 'Filtrar por estado de reserva',
+  })
+  @ApiResponse({ status: 200, description: 'Lista de reservas paginada.' })
+  findAll(
+    @Query() pagination: PaginationQueryDto,
+    @Query('includeDeleted') includeDeleted?: string,
+    @Query('estado') estado?: estado_reserva,
+  ) {
+    return this.reservasService.findAllPaginated({
+      ...pagination,
+      estado,
+      includeDeleted: includeDeleted === 'true',
+    });
   }
 
   @Get('mis-reservas')

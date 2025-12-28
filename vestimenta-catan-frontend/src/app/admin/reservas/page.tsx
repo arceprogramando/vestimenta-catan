@@ -539,7 +539,7 @@ export default function AdminReservasPage() {
                     setCurrentPage(0);
                   }}
                 >
-                  <SelectTrigger className="h-8 w-[70px]">
+                  <SelectTrigger className="h-8 w-17.5">
                     <SelectValue placeholder={pageSize} />
                   </SelectTrigger>
                   <SelectContent side="top">

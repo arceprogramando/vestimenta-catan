@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,33 +12,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
 import { Label } from '@/components/ui/label';
-import {
-  Loader2,
-  Plus,
-  Edit,
-  Trash2,
-  Ruler,
-  AlertTriangle,
-} from 'lucide-react';
+import { Loader2, Plus, Ruler, AlertTriangle } from 'lucide-react';
 import { useRequireAdmin } from '@/hooks/use-auth';
 import { api } from '@/lib/axios';
-
-interface Talle {
-  id: number;
-  nombre: string;
-  orden: number | null;
-  is_active: boolean;
-  created_at: string;
-}
+import { DataTable } from '@/components/ui/data-table';
+import { createColumns, Talle } from './columns';
 
 export default function AdminTallesPage() {
   const { isAdmin, isHydrated } = useRequireAdmin();
@@ -129,6 +108,24 @@ export default function AdminTallesPage() {
     }
   };
 
+  const columns = useMemo(() => createColumns({
+    onEdit: abrirModalEditar,
+    onDelete: (talle) => {
+      setTalleEliminar(talle);
+      setDeleteModalOpen(true);
+    },
+  }), []);
+
+  // Ordenar por campo orden
+  const tallesOrdenados = useMemo(() => {
+    return [...talles].sort((a, b) => {
+      if (a.orden === null && b.orden === null) return 0;
+      if (a.orden === null) return 1;
+      if (b.orden === null) return -1;
+      return a.orden - b.orden;
+    });
+  }, [talles]);
+
   if (!isHydrated || !isAdmin) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -136,14 +133,6 @@ export default function AdminTallesPage() {
       </div>
     );
   }
-
-  // Ordenar por campo orden
-  const tallesOrdenados = [...talles].sort((a, b) => {
-    if (a.orden === null && b.orden === null) return 0;
-    if (a.orden === null) return 1;
-    if (b.orden === null) return -1;
-    return a.orden - b.orden;
-  });
 
   return (
     <div className="space-y-6">
@@ -160,7 +149,7 @@ export default function AdminTallesPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Talles ({talles.length})</CardTitle>
+          <CardTitle>Talles</CardTitle>
           <CardDescription>Lista de talles para las variantes de productos</CardDescription>
         </CardHeader>
         <CardContent>
@@ -179,49 +168,12 @@ export default function AdminTallesPage() {
               <p className="text-muted-foreground">No hay talles registrados</p>
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>ID</TableHead>
-                  <TableHead>Nombre</TableHead>
-                  <TableHead>Orden</TableHead>
-                  <TableHead className="text-right">Acciones</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {tallesOrdenados.map((talle) => (
-                  <TableRow key={talle.id}>
-                    <TableCell className="font-mono text-sm">{talle.id}</TableCell>
-                    <TableCell className="font-medium">{talle.nombre}</TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {talle.orden ?? '-'}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-2">
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => abrirModalEditar(talle)}
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="text-destructive"
-                          onClick={() => {
-                            setTalleEliminar(talle);
-                            setDeleteModalOpen(true);
-                          }}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+            <DataTable
+              columns={columns}
+              data={tallesOrdenados}
+              searchKey="nombre"
+              searchPlaceholder="Buscar talle..."
+            />
           )}
         </CardContent>
       </Card>

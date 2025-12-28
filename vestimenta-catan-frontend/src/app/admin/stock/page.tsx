@@ -1,9 +1,8 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import {
   Select,
@@ -20,41 +19,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
 import { Label } from '@/components/ui/label';
-import {
-  Loader2,
-  Plus,
-  Search,
-  Edit,
-  Trash2,
-  Package,
-  AlertTriangle,
-} from 'lucide-react';
+import { Loader2, Plus, Package, AlertTriangle } from 'lucide-react';
 import { useRequireAdmin } from '@/hooks/use-auth';
 import { api } from '@/lib/axios';
-
-interface Variante {
-  id: string;
-  producto_id: number;
-  talle_id: string | null;
-  color_id: string;
-  cantidad: number;
-  producto: {
-    id: number;
-    nombre: string;
-    genero: string;
-  };
-  talle: { id: string; nombre: string } | null;
-  color: { id: string; nombre: string };
-}
+import { DataTable } from '@/components/ui/data-table';
+import { createColumns, Variante } from './columns';
 
 interface Producto {
   id: number;
@@ -80,8 +50,6 @@ export default function AdminStockPage() {
   const [colores, setColores] = useState<Color[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [busqueda, setBusqueda] = useState('');
-  const [filtroProducto, setFiltroProducto] = useState<string>('todos');
 
   // Modal states
   const [modalOpen, setModalOpen] = useState(false);
@@ -125,21 +93,6 @@ export default function AdminStockPage() {
       fetchData();
     }
   }, [isAdmin, isHydrated, fetchData]);
-
-  const variantesFiltradas = variantes.filter((variante) => {
-    if (filtroProducto !== 'todos' && variante.producto_id.toString() !== filtroProducto) {
-      return false;
-    }
-    if (busqueda) {
-      const searchLower = busqueda.toLowerCase();
-      return (
-        variante.producto.nombre.toLowerCase().includes(searchLower) ||
-        variante.talle?.nombre.toLowerCase().includes(searchLower) ||
-        variante.color.nombre.toLowerCase().includes(searchLower)
-      );
-    }
-    return true;
-  });
 
   const abrirModalCrear = () => {
     setVarianteEditar(null);
@@ -204,6 +157,26 @@ export default function AdminStockPage() {
     }
   };
 
+  const columns = useMemo(() => createColumns({
+    onEdit: abrirModalEditar,
+    onDelete: (variante) => {
+      setVarianteEliminar(variante);
+      setDeleteModalOpen(true);
+    },
+  }), []);
+
+  const filterableColumns = useMemo(() => [
+    {
+      id: 'genero',
+      title: 'Genero',
+      options: [
+        { label: 'Mujer', value: 'mujer' },
+        { label: 'Hombre', value: 'hombre' },
+        { label: 'Ninos', value: 'ninios' },
+      ],
+    },
+  ], []);
+
   if (!isHydrated || !isAdmin) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -251,36 +224,10 @@ export default function AdminStockPage() {
         </Card>
       </div>
 
-      {/* Filtros */}
-      <div className="flex flex-col sm:flex-row gap-4">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Buscar por producto, talle, color..."
-            value={busqueda}
-            onChange={(e) => setBusqueda(e.target.value)}
-            className="pl-10"
-          />
-        </div>
-        <Select value={filtroProducto} onValueChange={setFiltroProducto}>
-          <SelectTrigger className="w-full sm:w-48">
-            <SelectValue placeholder="Producto" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="todos">Todos los productos</SelectItem>
-            {productos.map((p) => (
-              <SelectItem key={p.id} value={p.id.toString()}>
-                {p.nombre} ({p.genero})
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-
       {/* Tabla */}
       <Card>
         <CardHeader>
-          <CardTitle>Variantes ({variantesFiltradas.length})</CardTitle>
+          <CardTitle>Variantes</CardTitle>
           <CardDescription>Stock por producto, talle y color</CardDescription>
         </CardHeader>
         <CardContent>
@@ -293,69 +240,19 @@ export default function AdminStockPage() {
               <p className="text-destructive mb-4">{error}</p>
               <Button onClick={fetchData}>Reintentar</Button>
             </div>
-          ) : variantesFiltradas.length === 0 ? (
+          ) : variantes.length === 0 ? (
             <div className="text-center py-12">
               <Package className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
               <p className="text-muted-foreground">No hay variantes</p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Producto</TableHead>
-                    <TableHead>Genero</TableHead>
-                    <TableHead>Talle</TableHead>
-                    <TableHead>Color</TableHead>
-                    <TableHead className="text-right">Cantidad</TableHead>
-                    <TableHead className="text-right">Acciones</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {variantesFiltradas.map((variante) => (
-                    <TableRow key={variante.id}>
-                      <TableCell className="font-medium">
-                        {variante.producto.nombre}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline">{variante.producto.genero}</Badge>
-                      </TableCell>
-                      <TableCell>{variante.talle?.nombre || '-'}</TableCell>
-                      <TableCell className="capitalize">{variante.color.nombre}</TableCell>
-                      <TableCell className="text-right">
-                        <Badge
-                          variant={variante.cantidad < 5 ? 'destructive' : 'secondary'}
-                        >
-                          {variante.cantidad}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => abrirModalEditar(variante)}
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="text-destructive"
-                            onClick={() => {
-                              setVarianteEliminar(variante);
-                              setDeleteModalOpen(true);
-                            }}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
+            <DataTable
+              columns={columns}
+              data={variantes}
+              searchKey="producto_nombre"
+              searchPlaceholder="Buscar por producto, talle, color..."
+              filterableColumns={filterableColumns}
+            />
           )}
         </CardContent>
       </Card>

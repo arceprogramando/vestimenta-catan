@@ -3,7 +3,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import {
   Select,
@@ -20,62 +19,19 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import {
-  Loader2,
-  Plus,
-  Search,
-  Edit,
-  Trash2,
-  Package,
-  AlertTriangle,
-} from 'lucide-react';
+import { Loader2, Plus, Package, AlertTriangle } from 'lucide-react';
 import { useRequireAdmin } from '@/hooks/use-auth';
 import { api } from '@/lib/axios';
-import { ProductImage } from '@/components/product-image';
-
-interface Producto {
-  id: number;
-  nombre: string;
-  descripcion: string | null;
-  genero: 'mujer' | 'hombre' | 'ninios';
-  thumbnail: string | null;
-  precio: number | null;
-  is_active: boolean;
-  created_at: string;
-  stock_total?: number;
-}
-
-const generoLabels: Record<string, string> = {
-  mujer: 'Mujer',
-  hombre: 'Hombre',
-  ninios: 'Ninos',
-};
-
-const formatPrecio = (precio: number | null | undefined) => {
-  if (precio === null || precio === undefined || isNaN(Number(precio))) return '-';
-  return new Intl.NumberFormat('es-AR', {
-    style: 'currency',
-    currency: 'ARS',
-  }).format(Number(precio));
-};
+import { DataTable } from '@/components/ui/data-table';
+import { createColumns, Producto } from './columns';
 
 export default function AdminProductosPage() {
   const { isAdmin, isHydrated } = useRequireAdmin();
   const [productos, setProductos] = useState<Producto[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [busqueda, setBusqueda] = useState('');
-  const [filtroGenero, setFiltroGenero] = useState<string>('todos');
 
   // Modal states
   const [modalOpen, setModalOpen] = useState(false);
@@ -112,20 +68,6 @@ export default function AdminProductosPage() {
       fetchProductos();
     }
   }, [isAdmin, isHydrated, fetchProductos]);
-
-  const productosFiltrados = productos.filter((producto) => {
-    if (filtroGenero !== 'todos' && producto.genero !== filtroGenero) {
-      return false;
-    }
-    if (busqueda) {
-      const searchLower = busqueda.toLowerCase();
-      return (
-        producto.nombre.toLowerCase().includes(searchLower) ||
-        producto.descripcion?.toLowerCase().includes(searchLower)
-      );
-    }
-    return true;
-  });
 
   const abrirModalCrear = () => {
     setProductoEditar(null);
@@ -201,6 +143,26 @@ export default function AdminProductosPage() {
     );
   }
 
+  const columns = createColumns({
+    onEdit: abrirModalEditar,
+    onDelete: (producto) => {
+      setProductoEliminar(producto);
+      setDeleteModalOpen(true);
+    },
+  });
+
+  const filterableColumns = [
+    {
+      id: 'genero',
+      title: 'Genero',
+      options: [
+        { label: 'Mujer', value: 'mujer' },
+        { label: 'Hombre', value: 'hombre' },
+        { label: 'Ninos', value: 'ninios' },
+      ],
+    },
+  ];
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -214,34 +176,10 @@ export default function AdminProductosPage() {
         </Button>
       </div>
 
-      {/* Filtros */}
-      <div className="flex flex-col sm:flex-row gap-4">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Buscar productos..."
-            value={busqueda}
-            onChange={(e) => setBusqueda(e.target.value)}
-            className="pl-10"
-          />
-        </div>
-        <Select value={filtroGenero} onValueChange={setFiltroGenero}>
-          <SelectTrigger className="w-full sm:w-40">
-            <SelectValue placeholder="Genero" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="todos">Todos</SelectItem>
-            <SelectItem value="mujer">Mujer</SelectItem>
-            <SelectItem value="hombre">Hombre</SelectItem>
-            <SelectItem value="ninios">Ninos</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-
       {/* Tabla de productos */}
       <Card>
         <CardHeader>
-          <CardTitle>Productos ({productosFiltrados.length})</CardTitle>
+          <CardTitle>Productos</CardTitle>
           <CardDescription>Lista de productos del catalogo</CardDescription>
         </CardHeader>
         <CardContent>
@@ -254,90 +192,19 @@ export default function AdminProductosPage() {
               <p className="text-destructive mb-4">{error}</p>
               <Button onClick={fetchProductos}>Reintentar</Button>
             </div>
-          ) : productosFiltrados.length === 0 ? (
+          ) : productos.length === 0 ? (
             <div className="text-center py-12">
               <Package className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
               <p className="text-muted-foreground">No hay productos</p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Producto</TableHead>
-                    <TableHead>Genero</TableHead>
-                    <TableHead className="text-right">Precio</TableHead>
-                    <TableHead className="text-right">Stock</TableHead>
-                    <TableHead className="text-right">Acciones</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {productosFiltrados.map((producto) => (
-                    <TableRow key={producto.id}>
-                      <TableCell>
-                        <div className="flex items-center gap-3">
-                          <div className="w-12 h-12 relative rounded-md overflow-hidden bg-muted shrink-0">
-                            <ProductImage
-                              src={producto.thumbnail}
-                              alt={producto.nombre}
-                              fill
-                              className="object-cover"
-                            />
-                          </div>
-                          <div>
-                            <p className="font-medium">{producto.nombre}</p>
-                            <p className="text-sm text-muted-foreground line-clamp-1">
-                              {producto.descripcion || 'Sin descripcion'}
-                            </p>
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline">
-                          {generoLabels[producto.genero] || producto.genero}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {formatPrecio(producto.precio)}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Badge
-                          variant={
-                            (producto.stock_total || 0) < 10
-                              ? 'destructive'
-                              : 'secondary'
-                          }
-                        >
-                          {producto.stock_total || 0}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => abrirModalEditar(producto)}
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="text-destructive"
-                            onClick={() => {
-                              setProductoEliminar(producto);
-                              setDeleteModalOpen(true);
-                            }}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
+            <DataTable
+              columns={columns}
+              data={productos}
+              searchKey="nombre"
+              searchPlaceholder="Buscar productos..."
+              filterableColumns={filterableColumns}
+            />
           )}
         </CardContent>
       </Card>

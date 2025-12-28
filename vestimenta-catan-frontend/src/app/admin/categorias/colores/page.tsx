@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,32 +12,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
 import { Label } from '@/components/ui/label';
-import {
-  Loader2,
-  Plus,
-  Edit,
-  Trash2,
-  Palette,
-  AlertTriangle,
-} from 'lucide-react';
+import { Loader2, Plus, Palette, AlertTriangle } from 'lucide-react';
 import { useRequireAdmin } from '@/hooks/use-auth';
 import { api } from '@/lib/axios';
-
-interface Color {
-  id: number;
-  nombre: string;
-  is_active: boolean;
-  created_at: string;
-}
+import { DataTable } from '@/components/ui/data-table';
+import { createColumns, Color } from './columns';
 
 export default function AdminColoresPage() {
   const { isAdmin, isHydrated } = useRequireAdmin();
@@ -120,6 +100,14 @@ export default function AdminColoresPage() {
     }
   };
 
+  const columns = useMemo(() => createColumns({
+    onEdit: abrirModalEditar,
+    onDelete: (color) => {
+      setColorEliminar(color);
+      setDeleteModalOpen(true);
+    },
+  }), []);
+
   if (!isHydrated || !isAdmin) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -143,7 +131,7 @@ export default function AdminColoresPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Colores ({colores.length})</CardTitle>
+          <CardTitle>Colores</CardTitle>
           <CardDescription>Lista de colores para las variantes de productos</CardDescription>
         </CardHeader>
         <CardContent>
@@ -162,45 +150,12 @@ export default function AdminColoresPage() {
               <p className="text-muted-foreground">No hay colores registrados</p>
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>ID</TableHead>
-                  <TableHead>Nombre</TableHead>
-                  <TableHead className="text-right">Acciones</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {colores.map((color) => (
-                  <TableRow key={color.id}>
-                    <TableCell className="font-mono text-sm">{color.id}</TableCell>
-                    <TableCell className="font-medium capitalize">{color.nombre}</TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-2">
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => abrirModalEditar(color)}
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="text-destructive"
-                          onClick={() => {
-                            setColorEliminar(color);
-                            setDeleteModalOpen(true);
-                          }}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+            <DataTable
+              columns={columns}
+              data={colores}
+              searchKey="nombre"
+              searchPlaceholder="Buscar color..."
+            />
           )}
         </CardContent>
       </Card>

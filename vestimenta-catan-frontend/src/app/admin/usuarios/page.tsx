@@ -4,7 +4,6 @@ import { useEffect, useState, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
 import {
   Select,
   SelectContent,
@@ -20,38 +19,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
 import { Label } from '@/components/ui/label';
-import {
-  Loader2,
-  Search,
-  Edit,
-  Users,
-  Shield,
-  Mail,
-  Eye,
-  EyeOff,
-} from 'lucide-react';
+import { Loader2, Users, Shield } from 'lucide-react';
 import { useRequireAdmin, useAuth } from '@/hooks/use-auth';
 import { api } from '@/lib/axios';
-
-interface Usuario {
-  id: number;
-  email: string;
-  nombre: string | null;
-  apellido: string | null;
-  rol: 'user' | 'empleado' | 'admin' | 'superadmin';
-  provider: string;
-  is_active: boolean;
-  created_at: string;
-}
+import { DataTable } from '@/components/ui/data-table';
+import { createColumns, Usuario } from './columns';
 
 const rolConfig: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
   superadmin: { label: 'Super Admin', variant: 'destructive' },
@@ -60,33 +33,12 @@ const rolConfig: Record<string, { label: string; variant: 'default' | 'secondary
   user: { label: 'Usuario', variant: 'outline' },
 };
 
-// Funcion para ocultar parcialmente el email (modo streamer)
-const maskEmail = (email: string): string => {
-  const [local, domain] = email.split('@');
-  if (!domain) return email;
-
-  // Mostrar primera letra + asteriscos + ultima letra antes del @
-  const maskedLocal = local.length <= 2
-    ? local[0] + '*'
-    : local[0] + '***' + local[local.length - 1];
-
-  // Mostrar primera letra del dominio + asteriscos + extension
-  const domainParts = domain.split('.');
-  const domainName = domainParts[0];
-  const extension = domainParts.slice(1).join('.');
-  const maskedDomain = domainName[0] + '***.' + extension;
-
-  return `${maskedLocal}@${maskedDomain}`;
-};
-
 export default function AdminUsuariosPage() {
   const { isAdmin, isHydrated } = useRequireAdmin();
   const { isSuperAdmin, user: currentUser } = useAuth();
   const [usuarios, setUsuarios] = useState<Usuario[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [busqueda, setBusqueda] = useState('');
-  const [filtroRol, setFiltroRol] = useState<string>('todos');
 
   // Modal states
   const [modalOpen, setModalOpen] = useState(false);
@@ -129,21 +81,6 @@ export default function AdminUsuariosPage() {
     }
   }, [isAdmin, isHydrated, fetchUsuarios]);
 
-  const usuariosFiltrados = usuarios.filter((usuario) => {
-    if (filtroRol !== 'todos' && usuario.rol !== filtroRol) {
-      return false;
-    }
-    if (busqueda) {
-      const searchLower = busqueda.toLowerCase();
-      return (
-        usuario.email.toLowerCase().includes(searchLower) ||
-        usuario.nombre?.toLowerCase().includes(searchLower) ||
-        usuario.apellido?.toLowerCase().includes(searchLower)
-      );
-    }
-    return true;
-  });
-
   const abrirModalEditar = (usuario: Usuario) => {
     setUsuarioEditar(usuario);
     setNuevoRol(usuario.rol);
@@ -177,6 +114,35 @@ export default function AdminUsuariosPage() {
   const admins = usuarios.filter((u) => u.rol === 'admin' || u.rol === 'superadmin').length;
   const empleados = usuarios.filter((u) => u.rol === 'empleado').length;
 
+  const columns = createColumns({
+    currentUserId: currentUser?.id,
+    isSuperAdmin,
+    emailsVisibles,
+    toggleEmailVisible,
+    onEdit: abrirModalEditar,
+  });
+
+  const filterableColumns = [
+    {
+      id: 'rol',
+      title: 'Rol',
+      options: [
+        { label: 'Super Admin', value: 'superadmin' },
+        { label: 'Admin', value: 'admin' },
+        { label: 'Empleado', value: 'empleado' },
+        { label: 'Usuario', value: 'user' },
+      ],
+    },
+    {
+      id: 'provider',
+      title: 'Proveedor',
+      options: [
+        { label: 'Google', value: 'google' },
+        { label: 'Local', value: 'local' },
+      ],
+    },
+  ];
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -208,35 +174,10 @@ export default function AdminUsuariosPage() {
         </Card>
       </div>
 
-      {/* Filtros */}
-      <div className="flex flex-col sm:flex-row gap-4">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Buscar por email o nombre..."
-            value={busqueda}
-            onChange={(e) => setBusqueda(e.target.value)}
-            className="pl-10"
-          />
-        </div>
-        <Select value={filtroRol} onValueChange={setFiltroRol}>
-          <SelectTrigger className="w-full sm:w-40">
-            <SelectValue placeholder="Rol" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="todos">Todos</SelectItem>
-            <SelectItem value="superadmin">Super Admin</SelectItem>
-            <SelectItem value="admin">Admin</SelectItem>
-            <SelectItem value="empleado">Empleado</SelectItem>
-            <SelectItem value="user">Usuario</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-
       {/* Tabla */}
       <Card>
         <CardHeader>
-          <CardTitle>Usuarios ({usuariosFiltrados.length})</CardTitle>
+          <CardTitle>Usuarios</CardTitle>
           <CardDescription>Lista de usuarios registrados</CardDescription>
         </CardHeader>
         <CardContent>
@@ -249,100 +190,19 @@ export default function AdminUsuariosPage() {
               <p className="text-destructive mb-4">{error}</p>
               <Button onClick={fetchUsuarios}>Reintentar</Button>
             </div>
-          ) : usuariosFiltrados.length === 0 ? (
+          ) : usuarios.length === 0 ? (
             <div className="text-center py-12">
               <Users className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
               <p className="text-muted-foreground">No hay usuarios</p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Usuario</TableHead>
-                    <TableHead>Email</TableHead>
-                    <TableHead>Proveedor</TableHead>
-                    <TableHead>Rol</TableHead>
-                    <TableHead className="text-right">Acciones</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {usuariosFiltrados.map((usuario) => {
-                    const config = rolConfig[usuario.rol] || rolConfig.user;
-                    const esUsuarioActual = currentUser?.id === usuario.id;
-                    const puedeEditar = isSuperAdmin && !esUsuarioActual;
-
-                    return (
-                      <TableRow key={usuario.id}>
-                        <TableCell>
-                          <div className="flex items-center gap-3">
-                            <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center">
-                              <span className="text-sm font-medium">
-                                {(usuario.nombre?.[0] || usuario.email[0]).toUpperCase()}
-                              </span>
-                            </div>
-                            <div>
-                              <p className="font-medium">
-                                {usuario.nombre || usuario.apellido
-                                  ? `${usuario.nombre || ''} ${usuario.apellido || ''}`.trim()
-                                  : 'Sin nombre'}
-                              </p>
-                              {esUsuarioActual && (
-                                <span className="text-xs text-muted-foreground">(Tu)</span>
-                              )}
-                            </div>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-6 w-6 p-0 shrink-0"
-                              onClick={() => toggleEmailVisible(usuario.id)}
-                              title={emailsVisibles.has(usuario.id) ? 'Ocultar email' : 'Mostrar email'}
-                            >
-                              {emailsVisibles.has(usuario.id) ? (
-                                <EyeOff className="h-3.5 w-3.5 text-muted-foreground" />
-                              ) : (
-                                <Eye className="h-3.5 w-3.5 text-muted-foreground" />
-                              )}
-                            </Button>
-                            <span className="text-sm font-mono w-48 inline-block overflow-hidden text-ellipsis whitespace-nowrap">
-                              {emailsVisibles.has(usuario.id) ? usuario.email : maskEmail(usuario.email)}
-                            </span>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="outline" className="capitalize">
-                            {usuario.provider}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant={config.variant}>{config.label}</Badge>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          {puedeEditar ? (
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => abrirModalEditar(usuario)}
-                            >
-                              <Edit className="h-4 w-4 mr-1" />
-                              Cambiar rol
-                            </Button>
-                          ) : (
-                            <span className="text-sm text-muted-foreground">
-                              {esUsuarioActual ? 'No puedes editarte' : 'Sin permisos'}
-                            </span>
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
-            </div>
+            <DataTable
+              columns={columns}
+              data={usuarios}
+              searchKey="nombre"
+              searchPlaceholder="Buscar por nombre o email..."
+              filterableColumns={filterableColumns}
+            />
           )}
         </CardContent>
       </Card>

@@ -1,25 +1,9 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
 import {
   Dialog,
   DialogContent,
@@ -29,11 +13,7 @@ import {
 } from '@/components/ui/dialog';
 import {
   Loader2,
-  Search,
   History,
-  Eye,
-  ChevronLeft,
-  ChevronRight,
   WifiOff,
   RefreshCw,
   ServerCrash,
@@ -41,19 +21,8 @@ import {
 } from 'lucide-react';
 import { useRequireAdmin } from '@/hooks/use-auth';
 import { api } from '@/lib/axios';
-
-interface AuditLog {
-  id: string;
-  tabla: string;
-  registro_id: string;
-  accion: string;
-  usuario_email: string | null;
-  datos_antes: Record<string, unknown> | null;
-  datos_despues: Record<string, unknown> | null;
-  campos_modificados: string[] | null;
-  ip_address: string | null;
-  created_at: string;
-}
+import { DataTable } from '@/components/ui/data-table';
+import { createColumns, AuditLog } from './columns';
 
 const accionConfig: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
   CREATE: { label: 'Crear', variant: 'default' },
@@ -72,18 +41,11 @@ const formatFecha = (fecha: string) => {
   });
 };
 
-const LIMIT = 20;
-
 export default function AdminAuditoriaPage() {
   const { isAdmin, isHydrated } = useRequireAdmin();
   const [logs, setLogs] = useState<AuditLog[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [busqueda, setBusqueda] = useState('');
-  const [filtroTabla, setFiltroTabla] = useState<string>('todos');
-  const [filtroAccion, setFiltroAccion] = useState<string>('todos');
-  const [offset, setOffset] = useState(0);
-  const [hasMore, setHasMore] = useState(true);
 
   // Modal para ver detalles
   const [detalleModalOpen, setDetalleModalOpen] = useState(false);
@@ -92,18 +54,10 @@ export default function AdminAuditoriaPage() {
   const fetchLogs = useCallback(async () => {
     try {
       setIsLoading(true);
-      const params = new URLSearchParams({
-        limit: LIMIT.toString(),
-        offset: offset.toString(),
-      });
-
-      if (filtroTabla !== 'todos') params.append('tabla', filtroTabla);
-      if (filtroAccion !== 'todos') params.append('accion', filtroAccion);
-
-      const response = await api.get<AuditLog[]>(`/audit/logs?${params}`);
+      // Traer todos los logs para que DataTable maneje la paginacion local
+      const response = await api.get<AuditLog[]>('/audit/logs?limit=500');
       const data = Array.isArray(response.data) ? response.data : [];
       setLogs(data);
-      setHasMore(data.length === LIMIT);
       setError(null);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Error desconocido';
@@ -113,7 +67,7 @@ export default function AdminAuditoriaPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [offset, filtroTabla, filtroAccion]);
+  }, []);
 
   useEffect(() => {
     if (isAdmin && isHydrated) {
@@ -121,22 +75,38 @@ export default function AdminAuditoriaPage() {
     }
   }, [isAdmin, isHydrated, fetchLogs]);
 
-  const logsFiltrados = logs.filter((log) => {
-    if (busqueda) {
-      const searchLower = busqueda.toLowerCase();
-      return (
-        log.tabla.toLowerCase().includes(searchLower) ||
-        log.registro_id.includes(searchLower) ||
-        log.usuario_email?.toLowerCase().includes(searchLower)
-      );
-    }
-    return true;
-  });
-
   const verDetalle = (log: AuditLog) => {
     setLogSeleccionado(log);
     setDetalleModalOpen(true);
   };
+
+  const columns = useMemo(() => createColumns({
+    onVerDetalle: verDetalle,
+  }), []);
+
+  const filterableColumns = useMemo(() => [
+    {
+      id: 'tabla',
+      title: 'Tabla',
+      options: [
+        { label: 'Usuarios', value: 'usuarios' },
+        { label: 'Productos', value: 'productos' },
+        { label: 'Variantes', value: 'producto_variantes' },
+        { label: 'Reservas', value: 'reservas' },
+        { label: 'Colores', value: 'colores' },
+        { label: 'Talles', value: 'talles' },
+      ],
+    },
+    {
+      id: 'accion',
+      title: 'Accion',
+      options: [
+        { label: 'Crear', value: 'CREATE' },
+        { label: 'Actualizar', value: 'UPDATE' },
+        { label: 'Eliminar', value: 'DELETE' },
+      ],
+    },
+  ], []);
 
   if (!isHydrated || !isAdmin) {
     return (
@@ -145,8 +115,6 @@ export default function AdminAuditoriaPage() {
       </div>
     );
   }
-
-  const tablas = ['usuarios', 'productos', 'producto_variantes', 'reservas', 'colores', 'talles'];
 
   return (
     <div className="space-y-6">
@@ -160,47 +128,12 @@ export default function AdminAuditoriaPage() {
         </Badge>
       </div>
 
-      {/* Filtros */}
-      <div className="flex flex-col sm:flex-row gap-4">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Buscar por tabla, ID o usuario..."
-            value={busqueda}
-            onChange={(e) => setBusqueda(e.target.value)}
-            className="pl-10"
-          />
-        </div>
-        <Select value={filtroTabla} onValueChange={(v) => { setFiltroTabla(v); setOffset(0); }}>
-          <SelectTrigger className="w-full sm:w-44">
-            <SelectValue placeholder="Tabla" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="todos">Todas las tablas</SelectItem>
-            {tablas.map((t) => (
-              <SelectItem key={t} value={t}>{t}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Select value={filtroAccion} onValueChange={(v) => { setFiltroAccion(v); setOffset(0); }}>
-          <SelectTrigger className="w-full sm:w-36">
-            <SelectValue placeholder="Accion" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="todos">Todas</SelectItem>
-            <SelectItem value="CREATE">Crear</SelectItem>
-            <SelectItem value="UPDATE">Actualizar</SelectItem>
-            <SelectItem value="DELETE">Eliminar</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-
       {/* Tabla */}
       <Card>
         <CardHeader>
           <CardTitle>Logs de Auditoria</CardTitle>
           <CardDescription>
-            Mostrando {logsFiltrados.length} registros
+            Registro de todas las acciones realizadas en el sistema
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -236,94 +169,20 @@ export default function AdminAuditoriaPage() {
                 Reintentar
               </Button>
             </div>
-          ) : logsFiltrados.length === 0 ? (
+          ) : logs.length === 0 ? (
             <div className="text-center py-12">
               <History className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
               <p className="text-muted-foreground">No hay registros de auditoria</p>
             </div>
           ) : (
-            <>
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Fecha</TableHead>
-                      <TableHead>Usuario</TableHead>
-                      <TableHead>Accion</TableHead>
-                      <TableHead>Tabla</TableHead>
-                      <TableHead>Registro ID</TableHead>
-                      <TableHead className="text-right">Detalle</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {logsFiltrados.map((log) => {
-                      const config = accionConfig[log.accion] || { label: log.accion, variant: 'outline' as const };
-                      return (
-                        <TableRow key={log.id}>
-                          <TableCell className="text-sm text-muted-foreground whitespace-nowrap">
-                            {formatFecha(log.created_at)}
-                          </TableCell>
-                          <TableCell>
-                            <span className="text-sm">
-                              {log.usuario_email || 'Sistema'}
-                            </span>
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant={config.variant}>{config.label}</Badge>
-                          </TableCell>
-                          <TableCell>
-                            <code className="text-xs bg-muted px-1.5 py-0.5 rounded">
-                              {log.tabla}
-                            </code>
-                          </TableCell>
-                          <TableCell className="font-mono text-sm">
-                            {log.registro_id}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => verDetalle(log)}
-                            >
-                              <Eye className="h-4 w-4" />
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
-              </div>
-
-              {/* Paginacion */}
-              {(offset > 0 || hasMore) && (
-                <div className="flex items-center justify-between pt-4 border-t">
-                  <p className="text-sm text-muted-foreground">
-                    Pagina {Math.floor(offset / LIMIT) + 1}
-                  </p>
-                  <div className="flex gap-2">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => setOffset((o) => Math.max(0, o - LIMIT))}
-                      disabled={offset === 0}
-                    >
-                      <ChevronLeft className="h-4 w-4" />
-                      Anterior
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => setOffset((o) => o + LIMIT)}
-                      disabled={!hasMore}
-                    >
-                      Siguiente
-                      <ChevronRight className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              )}
-            </>
+            <DataTable
+              columns={columns}
+              data={logs}
+              searchKey="usuario_email"
+              searchPlaceholder="Buscar por tabla, ID o usuario..."
+              filterableColumns={filterableColumns}
+              pageSize={20}
+            />
           )}
         </CardContent>
       </Card>

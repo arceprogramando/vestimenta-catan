@@ -85,7 +85,7 @@ export function DataTable<TData, TValue>({
   const [searchValue, setSearchValue] = React.useState("")
 
   // Debounce para búsqueda server-side
-  const searchTimeoutRef = React.useRef<NodeJS.Timeout>()
+  const searchTimeoutRef = React.useRef<NodeJS.Timeout>(undefined)
 
   const handleSearchChange = React.useCallback((value: string) => {
     setSearchValue(value)

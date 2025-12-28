@@ -106,7 +106,7 @@ export default function AdminReservasPage() {
   const [comprobanteModalOpen, setComprobanteModalOpen] = useState(false);
   const [reservaComprobante, setReservaComprobante] = useState<Reserva | null>(null);
   const comprobanteRef = useRef<HTMLDivElement>(null);
-  const searchTimeoutRef = useRef<NodeJS.Timeout>();
+  const searchTimeoutRef = useRef<NodeJS.Timeout>(undefined);
 
   // Fetch con parámetros server-side
   const fetchData = useCallback(() => {

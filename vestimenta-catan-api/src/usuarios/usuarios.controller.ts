@@ -62,13 +62,13 @@ export class UsuariosController {
   findAll(
     @Query() pagination: PaginationQueryDto,
     @Query('includeInactive') includeInactive?: string,
-    @Query('rol') rol?: rol_usuario,
+    @Query('rol') rol?: string,
   ) {
     return this.usuariosService.findAllPaginated({
       limit: pagination.limit,
       offset: pagination.offset,
       search: pagination.search,
-      rol,
+      rol: rol as rol_usuario | undefined,
       includeInactive: includeInactive === 'true',
     });
   }

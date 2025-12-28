@@ -20,7 +20,11 @@
     "test:ci": "jest --coverage --coverageReporters=text-summary --passWithNoTests",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
-    "validate": "pnpm run test && pnpm run lint"
+    "validate": "pnpm run test && pnpm run lint",
+    "seed:mock": "ts-node prisma/seed-mock-data.ts",
+    "load-test": "ts-node scripts/load-test.ts",
+    "load-test:light": "ts-node scripts/load-test.ts --duration 10 --connections 20",
+    "load-test:heavy": "ts-node scripts/load-test.ts --duration 60 --connections 200"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",
@@ -61,6 +65,7 @@
     "@nestjs/cli": "^11.0.0",
     "@nestjs/schematics": "^11.0.0",
     "@nestjs/testing": "^11.0.1",
+    "@types/autocannon": "^7.12.7",
     "@types/bcrypt": "^6.0.0",
     "@types/cookie-parser": "^1.4.10",
     "@types/express": "^5.0.0",
@@ -69,6 +74,7 @@
     "@types/passport-jwt": "^4.0.1",
     "@types/pg": "^8.16.0",
     "@types/supertest": "^6.0.2",
+    "autocannon": "^8.0.0",
     "dotenv-cli": "^11.0.0",
     "eslint": "^9.18.0",
     "eslint-config-prettier": "^10.0.1",

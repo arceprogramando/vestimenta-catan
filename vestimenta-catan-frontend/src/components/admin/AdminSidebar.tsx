@@ -46,7 +46,10 @@ import {
   Settings,
   LogOut,
   Shirt,
+  Moon,
+  Sun,
 } from 'lucide-react';
+import { useTheme } from 'next-themes';
 import { useAuth } from '@/hooks/use-auth';
 import { useAuthStore } from '@/stores/auth-store';
 
@@ -115,6 +118,7 @@ export function AdminSidebar({
   const pathname = usePathname();
   const { hasPermission, isSuperAdmin } = useAuth();
   const { user, logout } = useAuthStore();
+  const { theme, setTheme } = useTheme();
   const [categoriasExpanded, setCategoriasExpanded] = React.useState(
     pathname.startsWith('/admin/categorias')
   );
@@ -283,18 +287,28 @@ export function AdminSidebar({
       </SidebarContent>
 
       <SidebarFooter className="px-2.5 pb-3 group-data-[collapsible=icon]:hidden">
-        <div className="flex items-center gap-3 rounded-lg border p-3 bg-card">
-          <div className="flex size-8 items-center justify-center rounded-full bg-primary/10 text-primary shrink-0">
-            <span className="text-sm font-medium">
-              {user?.nombre?.charAt(0).toUpperCase() || 'U'}
-            </span>
+        <div className="flex items-center justify-between gap-3 rounded-lg border p-3 bg-card">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="flex size-8 items-center justify-center rounded-full bg-primary/10 text-primary shrink-0">
+              <span className="text-sm font-medium">
+                {user?.nombre?.charAt(0).toUpperCase() || 'U'}
+              </span>
+            </div>
+            <div className="flex flex-col min-w-0">
+              <span className="text-sm font-medium truncate">{user?.nombre}</span>
+              <span className="text-xs text-muted-foreground truncate">
+                {user?.rol}
+              </span>
+            </div>
           </div>
-          <div className="flex flex-col min-w-0">
-            <span className="text-sm font-medium truncate">{user?.nombre}</span>
-            <span className="text-xs text-muted-foreground truncate">
-              {user?.rol}
-            </span>
-          </div>
+          <button
+            onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
+            className="flex size-8 items-center justify-center rounded-md hover:bg-accent transition-colors shrink-0 cursor-pointer"
+          >
+            <Sun className="h-4 w-4 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
+            <Moon className="absolute h-4 w-4 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
+            <span className="sr-only">Cambiar tema</span>
+          </button>
         </div>
       </SidebarFooter>
     </Sidebar>

@@ -1,9 +1,10 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { StatsCard } from '@/components/admin/StatsCard';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import {
   Package,
   Users,
@@ -18,6 +19,10 @@ import {
   WifiOff,
   RefreshCw,
   ServerCrash,
+  Search,
+  ArrowUpDown,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -25,6 +30,13 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { api } from '@/lib/axios';
 import type {
   DashboardStats,
@@ -33,17 +45,16 @@ import type {
   StockBajoAlerta,
   AuditLog,
   ProductosAgregadosPorDia,
+  StockPorProductoResponse,
 } from '@/types/admin';
 import {
-  AreaChart,
-  Area,
   XAxis,
   YAxis,
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  BarChart,
-  Bar,
+  LineChart,
+  Line,
 } from 'recharts';
 import { useTheme } from 'next-themes';
 import { useAuth } from '@/hooks/use-auth';
@@ -96,6 +107,31 @@ function CustomTooltip({ active, payload, label }: CustomTooltipProps) {
   return null;
 }
 
+// Colores para el ranking de top productos
+const rankColors = [
+  'border-yellow-400', // 1st - Gold
+  'border-gray-400',   // 2nd - Silver
+  'border-amber-600',  // 3rd - Bronze
+  'border-blue-400',   // 4th
+  'border-purple-400', // 5th
+];
+
+const rankBgColors = [
+  'bg-yellow-400/10',
+  'bg-gray-400/10',
+  'bg-amber-600/10',
+  'bg-blue-400/10',
+  'bg-purple-400/10',
+];
+
+interface TopProducto {
+  id: number;
+  nombre: string;
+  genero: string;
+  totalStock: number;
+  variantes: number;
+}
+
 export default function AdminDashboardPage() {
   const { fullName } = useAuth();
   const { theme } = useTheme();
@@ -103,11 +139,21 @@ export default function AdminDashboardPage() {
   const [reservasChart, setReservasChart] = useState<ReservasPorDia[]>([]);
   const [productosChart, setProductosChart] = useState<ProductosAgregadosPorDia[]>([]);
   const [stockChart, setStockChart] = useState<StockPorCategoria[]>([]);
+  const [stockPorProducto, setStockPorProducto] = useState<StockPorProductoResponse | null>(null);
   const [stockBajo, setStockBajo] = useState<StockBajoAlerta[]>([]);
   const [ultimosCambios, setUltimosCambios] = useState<AuditLog[]>([]);
+  const [topProductos, setTopProductos] = useState<TopProducto[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [period, setPeriod] = useState<Period>('30');
+
+  // Table state
+  const [searchTerm, setSearchTerm] = useState('');
+  const [sortField, setSortField] = useState<'nombre' | 'genero' | 'totalStock'>('totalStock');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [filterGenero, setFilterGenero] = useState<string>('all');
+  const itemsPerPage = 5;
 
   const axisColor = theme === 'dark' ? '#71717a' : '#868c98';
   const gridColor = theme === 'dark' ? '#3f3f46' : '#e2e4e9';
@@ -118,11 +164,12 @@ export default function AdminDashboardPage() {
         setLoading(true);
         setError(null);
 
-        const [statsRes, reservasRes, productosRes, stockRes, alertasRes, cambiosRes] = await Promise.all([
+        const [statsRes, reservasRes, productosRes, stockRes, stockProdRes, alertasRes, cambiosRes] = await Promise.all([
           api.get<DashboardStats>('/dashboard/stats'),
           api.get<ReservasPorDia[]>(`/dashboard/charts/reservas?dias=${period}`),
           api.get<ProductosAgregadosPorDia[]>(`/dashboard/charts/productos-agregados?dias=${period}`),
           api.get<StockPorCategoria[]>('/dashboard/charts/stock'),
+          api.get<StockPorProductoResponse>(`/dashboard/charts/stock-por-producto?dias=${period}`),
           api.get<StockBajoAlerta[]>('/dashboard/alertas/stock-bajo?umbral=5&limit=10'),
           api.get<AuditLog[]>('/dashboard/ultimos-cambios?limit=5'),
         ]);
@@ -131,8 +178,26 @@ export default function AdminDashboardPage() {
         setReservasChart(reservasRes.data);
         setProductosChart(productosRes.data);
         setStockChart(stockRes.data);
+        setStockPorProducto(stockProdRes.data);
         setStockBajo(alertasRes.data);
         setUltimosCambios(cambiosRes.data);
+
+        // Calcular top productos desde stockPorProducto
+        if (stockProdRes.data?.productos) {
+          // Buscar los productos con más stock desde el último día de datos
+          const lastDayData = stockProdRes.data.data[stockProdRes.data.data.length - 1];
+          const productosConStock = stockProdRes.data.productos.map((prod, idx) => ({
+            id: idx + 1,
+            nombre: prod.nombre.split(' (')[0], // Remover género del nombre
+            genero: prod.nombre.match(/\(([^)]+)\)/)?.[1] || 'N/A',
+            totalStock: typeof lastDayData?.[prod.nombre] === 'number'
+              ? lastDayData[prod.nombre] as number
+              : 0,
+            variantes: 1,
+          })).sort((a, b) => b.totalStock - a.totalStock);
+
+          setTopProductos(productosConStock.slice(0, 5));
+        }
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Error al cargar dashboard');
         console.error('Error fetching dashboard:', err);
@@ -158,13 +223,68 @@ export default function AdminDashboardPage() {
     });
   };
 
+  // Filtered and sorted data for table
+  const filteredAlerts = useMemo(() => {
+    let result = [...stockBajo];
+
+    // Filter by search
+    if (searchTerm) {
+      const term = searchTerm.toLowerCase();
+      result = result.filter(
+        (item) =>
+          item.producto.nombre.toLowerCase().includes(term) ||
+          item.color.nombre.toLowerCase().includes(term) ||
+          (item.talle?.nombre?.toLowerCase().includes(term) ?? false)
+      );
+    }
+
+    // Filter by genero
+    if (filterGenero !== 'all') {
+      result = result.filter((item) => item.producto.genero === filterGenero);
+    }
+
+    // Sort
+    result.sort((a, b) => {
+      let comparison = 0;
+      switch (sortField) {
+        case 'nombre':
+          comparison = a.producto.nombre.localeCompare(b.producto.nombre);
+          break;
+        case 'genero':
+          comparison = a.producto.genero.localeCompare(b.producto.genero);
+          break;
+        case 'totalStock':
+          comparison = a.cantidad - b.cantidad;
+          break;
+      }
+      return sortDirection === 'asc' ? comparison : -comparison;
+    });
+
+    return result;
+  }, [stockBajo, searchTerm, filterGenero, sortField, sortDirection]);
+
+  // Pagination
+  const totalPages = Math.ceil(filteredAlerts.length / itemsPerPage);
+  const paginatedAlerts = filteredAlerts.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
+
+  const handleSort = (field: 'nombre' | 'genero' | 'totalStock') => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDirection('desc');
+    }
+  };
+
   const isNetworkError = error?.toLowerCase().includes('network') || error?.toLowerCase().includes('failed to fetch');
   const isServerError = error?.toLowerCase().includes('500') || error?.toLowerCase().includes('server');
 
   const handleRetry = () => {
     setError(null);
     setLoading(true);
-    // El useEffect se re-ejecuta automáticamente cuando loading cambia
     window.location.reload();
   };
 
@@ -278,16 +398,19 @@ export default function AdminDashboardPage() {
         />
       </div>
 
-      {/* Charts Row */}
-      <div className="flex flex-col lg:flex-row gap-4 sm:gap-6">
-        {/* Reservas Chart */}
-        <div className="bg-card text-card-foreground rounded-lg border flex-1">
+      {/* Main Chart + Top Performers - Square UI Style */}
+      <div className="flex flex-col lg:flex-row gap-6">
+        {/* Main Multiline Chart - 70% width */}
+        <div className="bg-card text-card-foreground rounded-lg border flex-1 lg:flex-[2.5]">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4 border-b border-border/50">
-            <h3 className="font-medium text-sm sm:text-base">Reservas</h3>
+            <div>
+              <h3 className="font-semibold text-base sm:text-lg">Stock por Producto</h3>
+              <p className="text-xs text-muted-foreground">Unidades agregadas por dia</p>
+            </div>
             <div className="flex items-center gap-2">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm" className="h-7 gap-1.5">
+                  <Button variant="outline" size="sm" className="h-8 gap-1.5">
                     <Calendar className="size-3.5" />
                     <span className="text-sm">{periodLabels[period]}</span>
                     <ChevronDown className="size-3" />
@@ -303,161 +426,117 @@ export default function AdminDashboardPage() {
               </DropdownMenu>
             </div>
           </div>
+
+          {/* Legend */}
+          {stockPorProducto && stockPorProducto.productos.length > 0 && (
+            <div className="flex flex-wrap gap-3 px-4 pt-4">
+              {stockPorProducto.productos.map((prod) => (
+                <div key={prod.nombre} className="flex items-center gap-1.5">
+                  <span
+                    className="size-2.5 rounded-full"
+                    style={{ backgroundColor: prod.color }}
+                  />
+                  <span className="text-xs text-muted-foreground">{prod.nombre}</span>
+                </div>
+              ))}
+            </div>
+          )}
+
           <div className="p-4">
-            <div className="h-50 sm:h-62.5 w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart
-                  data={reservasChart}
-                  margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
-                >
-                  <CartesianGrid strokeDasharray="3 3" stroke={gridColor} vertical={false} />
-                  <XAxis
-                    dataKey="fecha"
-                    tickFormatter={formatFechaCorta}
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fontSize: 10, fill: axisColor }}
-                  />
-                  <YAxis
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fontSize: 10, fill: axisColor }}
-                  />
-                  <Tooltip content={<CustomTooltip />} />
-                  <defs>
-                    <linearGradient id="gradientTotal" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#3b82f6" stopOpacity={0.3} />
-                      <stop offset="100%" stopColor="#3b82f6" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <Area
-                    type="monotone"
-                    dataKey="total"
-                    stroke="#3b82f6"
-                    strokeWidth={2}
-                    fill="url(#gradientTotal)"
-                    name="Total"
-                    dot={false}
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
+            <div className="h-72 sm:h-80 w-full">
+              {stockPorProducto && stockPorProducto.productos.length > 0 ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart
+                    data={stockPorProducto.data}
+                    margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" stroke={gridColor} vertical={false} />
+                    <XAxis
+                      dataKey="fecha"
+                      tickFormatter={formatFechaCorta}
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{ fontSize: 10, fill: axisColor }}
+                    />
+                    <YAxis
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{ fontSize: 10, fill: axisColor }}
+                    />
+                    <Tooltip content={<CustomTooltip />} />
+                    {stockPorProducto.productos.map((prod) => (
+                      <Line
+                        key={prod.nombre}
+                        type="monotone"
+                        dataKey={prod.nombre}
+                        stroke={prod.color}
+                        strokeWidth={2}
+                        dot={false}
+                        name={prod.nombre}
+                      />
+                    ))}
+                  </LineChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="flex items-center justify-center h-full">
+                  <p className="text-muted-foreground">No hay datos de stock por producto</p>
+                </div>
+              )}
             </div>
           </div>
         </div>
 
-        {/* Productos Agregados Chart */}
-        <div className="bg-card text-card-foreground rounded-lg border flex-1">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4 border-b border-border/50">
-            <h3 className="font-medium text-sm sm:text-base">Productos Agregados</h3>
-          </div>
-          <div className="p-4">
-            <div className="h-50 sm:h-62.5 w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart
-                  data={productosChart}
-                  margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
-                >
-                  <CartesianGrid strokeDasharray="3 3" stroke={gridColor} vertical={false} />
-                  <XAxis
-                    dataKey="fecha"
-                    tickFormatter={formatFechaCorta}
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fontSize: 10, fill: axisColor }}
-                  />
-                  <YAxis
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fontSize: 10, fill: axisColor }}
-                  />
-                  <Tooltip content={<CustomTooltip />} />
-                  <defs>
-                    <linearGradient id="gradientProductos" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#22c55e" stopOpacity={0.3} />
-                      <stop offset="100%" stopColor="#22c55e" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <Area
-                    type="monotone"
-                    dataKey="total"
-                    stroke="#22c55e"
-                    strokeWidth={2}
-                    fill="url(#gradientProductos)"
-                    name="Productos"
-                    dot={false}
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
+        {/* Top Productos Panel - 30% width */}
+        <div className="bg-card text-card-foreground rounded-lg border lg:w-80 xl:w-96">
+          <div className="flex items-center justify-between p-4 border-b border-border/50">
+            <div>
+              <h3 className="font-semibold text-base">Top Productos</h3>
+              <p className="text-xs text-muted-foreground">Por stock disponible</p>
             </div>
-          </div>
-        </div>
-
-        {/* Stock Chart */}
-        <div className="bg-card text-card-foreground rounded-lg border w-full lg:w-100">
-          <div className="flex items-center justify-between gap-3 p-4 border-b border-border/50">
-            <h3 className="font-medium text-sm sm:text-base">Stock por Categoria</h3>
-          </div>
-          <div className="p-4">
-            <div className="h-50 sm:h-62.5 w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart
-                  data={stockChart}
-                  margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
-                >
-                  <CartesianGrid strokeDasharray="3 3" stroke={gridColor} vertical={false} />
-                  <XAxis
-                    dataKey="genero"
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fontSize: 10, fill: axisColor }}
-                  />
-                  <YAxis
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fontSize: 10, fill: axisColor }}
-                  />
-                  <Tooltip content={<CustomTooltip />} />
-                  <Bar dataKey="totalStock" fill="#22c55e" name="Stock Total" radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="stockBajo" fill="#ec4899" name="Stock Bajo" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Tables Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Stock Bajo Alerts */}
-        <div className="bg-card text-card-foreground rounded-lg border">
-          <div className="flex items-center gap-2 p-4 border-b border-border/50">
-            <AlertTriangle className="size-4 text-pink-400" />
-            <h3 className="font-medium text-sm sm:text-base">Alertas de Stock Bajo</h3>
-            <Badge variant="secondary" className="ml-auto">
-              {stockBajo.length}
+            <Badge variant="secondary" className="text-xs">
+              Top 5
             </Badge>
           </div>
           <div className="p-4">
-            {stockBajo.length === 0 ? (
-              <p className="text-muted-foreground text-center py-4">
-                No hay alertas de stock bajo
-              </p>
+            {topProductos.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-8 text-center">
+                <Package className="size-10 text-muted-foreground mb-2" />
+                <p className="text-sm text-muted-foreground">Sin datos de productos</p>
+              </div>
             ) : (
               <div className="space-y-3">
-                {stockBajo.map((item) => (
+                {topProductos.map((producto, index) => (
                   <div
-                    key={item.id}
-                    className="flex items-center justify-between p-3 bg-muted/50 dark:bg-neutral-800/50 rounded-lg border"
+                    key={producto.id}
+                    className={`flex items-center gap-3 p-3 rounded-lg border-2 ${rankColors[index]} ${rankBgColors[index]} transition-all hover:scale-[1.02]`}
                   >
-                    <div>
-                      <p className="font-medium text-sm">{item.producto.nombre}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {item.talle?.nombre && `Talle ${item.talle.nombre} - `}
-                        {item.color.nombre}
-                      </p>
+                    {/* Rank Badge */}
+                    <div className={`flex items-center justify-center w-8 h-8 rounded-full font-bold text-sm ${
+                      index === 0 ? 'bg-yellow-400 text-yellow-900' :
+                      index === 1 ? 'bg-gray-300 text-gray-700' :
+                      index === 2 ? 'bg-amber-600 text-white' :
+                      'bg-muted text-muted-foreground'
+                    }`}>
+                      {index + 1}
                     </div>
-                    <Badge variant={item.cantidad === 0 ? 'destructive' : 'secondary'}>
-                      {item.cantidad} uds
+
+                    {/* Product Avatar */}
+                    <div className="flex items-center justify-center w-10 h-10 rounded-full bg-primary/10 text-primary font-semibold">
+                      {producto.nombre.charAt(0).toUpperCase()}
+                    </div>
+
+                    {/* Product Info */}
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-sm truncate">{producto.nombre}</p>
+                      <p className="text-xs text-muted-foreground">{producto.genero}</p>
+                    </div>
+
+                    {/* Stock Badge */}
+                    <Badge
+                      variant={producto.totalStock > 10 ? 'default' : producto.totalStock > 0 ? 'secondary' : 'destructive'}
+                      className="shrink-0"
+                    >
+                      {producto.totalStock} uds
                     </Badge>
                   </div>
                 ))}
@@ -465,39 +544,221 @@ export default function AdminDashboardPage() {
             )}
           </div>
         </div>
+      </div>
 
-        {/* Recent Changes */}
-        <div className="bg-card text-card-foreground rounded-lg border">
-          <div className="flex items-center gap-2 p-4 border-b border-border/50">
-            <Clock className="size-4 text-muted-foreground" />
-            <h3 className="font-medium text-sm sm:text-base">Ultimos Cambios</h3>
+      {/* Stock Bajo Management Table - Square UI Style */}
+      <div className="bg-card text-card-foreground rounded-lg border">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-4 border-b border-border/50">
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="size-5 text-pink-400" />
+            <div>
+              <h3 className="font-semibold text-base">Gestion de Stock Bajo</h3>
+              <p className="text-xs text-muted-foreground">Productos que necesitan reposicion</p>
+            </div>
           </div>
-          <div className="p-4">
-            {ultimosCambios.length === 0 ? (
-              <p className="text-muted-foreground text-center py-4">No hay cambios recientes</p>
-            ) : (
-              <div className="space-y-3">
-                {ultimosCambios.map((log) => (
-                  <div
-                    key={log.id}
-                    className="flex items-start justify-between p-3 bg-muted/50 dark:bg-neutral-800/50 rounded-lg border"
+
+          <div className="flex flex-col sm:flex-row gap-2">
+            {/* Search */}
+            <div className="relative">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+              <Input
+                placeholder="Buscar producto..."
+                value={searchTerm}
+                onChange={(e) => {
+                  setSearchTerm(e.target.value);
+                  setCurrentPage(1);
+                }}
+                className="pl-9 h-9 w-full sm:w-[200px]"
+              />
+            </div>
+
+            {/* Filter */}
+            <Select value={filterGenero} onValueChange={(v) => { setFilterGenero(v); setCurrentPage(1); }}>
+              <SelectTrigger className="h-9 w-full sm:w-[130px]">
+                <SelectValue placeholder="Genero" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos</SelectItem>
+                <SelectItem value="mujer">Mujer</SelectItem>
+                <SelectItem value="hombre">Hombre</SelectItem>
+                <SelectItem value="ninios">Ninos</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        {/* Table */}
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead>
+              <tr className="border-b bg-muted/50">
+                <th className="text-left p-3 font-medium text-sm">
+                  <button
+                    onClick={() => handleSort('nombre')}
+                    className="flex items-center gap-1 hover:text-primary transition-colors"
                   >
-                    <div>
-                      <p className="font-medium text-sm capitalize">
-                        {log.accion.toLowerCase()} en {log.tabla}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {log.usuario_email || 'Sistema'}
-                      </p>
-                    </div>
-                    <span className="text-xs text-muted-foreground whitespace-nowrap">
-                      {formatFechaHora(log.created_at)}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            )}
+                    Producto
+                    <ArrowUpDown className="size-3" />
+                  </button>
+                </th>
+                <th className="text-left p-3 font-medium text-sm hidden sm:table-cell">
+                  <button
+                    onClick={() => handleSort('genero')}
+                    className="flex items-center gap-1 hover:text-primary transition-colors"
+                  >
+                    Genero
+                    <ArrowUpDown className="size-3" />
+                  </button>
+                </th>
+                <th className="text-left p-3 font-medium text-sm">Variante</th>
+                <th className="text-right p-3 font-medium text-sm">
+                  <button
+                    onClick={() => handleSort('totalStock')}
+                    className="flex items-center gap-1 ml-auto hover:text-primary transition-colors"
+                  >
+                    Stock
+                    <ArrowUpDown className="size-3" />
+                  </button>
+                </th>
+                <th className="text-right p-3 font-medium text-sm">Estado</th>
+              </tr>
+            </thead>
+            <tbody>
+              {paginatedAlerts.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="text-center py-8">
+                    <Package className="size-10 mx-auto text-muted-foreground mb-2" />
+                    <p className="text-muted-foreground">
+                      {searchTerm || filterGenero !== 'all'
+                        ? 'No se encontraron resultados'
+                        : 'No hay alertas de stock bajo'}
+                    </p>
+                  </td>
+                </tr>
+              ) : (
+                paginatedAlerts.map((item, idx) => (
+                  <tr
+                    key={item.id}
+                    className={`border-b last:border-0 hover:bg-muted/30 transition-colors ${
+                      idx % 2 === 0 ? 'bg-transparent' : 'bg-muted/20'
+                    }`}
+                  >
+                    <td className="p-3">
+                      <div className="flex items-center gap-3">
+                        <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/10 text-primary font-semibold text-sm">
+                          {item.producto.nombre.charAt(0).toUpperCase()}
+                        </div>
+                        <span className="font-medium text-sm">{item.producto.nombre}</span>
+                      </div>
+                    </td>
+                    <td className="p-3 hidden sm:table-cell">
+                      <Badge variant="outline" className="capitalize">
+                        {item.producto.genero === 'ninios' ? 'Ninos' : item.producto.genero}
+                      </Badge>
+                    </td>
+                    <td className="p-3 text-sm text-muted-foreground">
+                      {item.talle?.nombre && `Talle ${item.talle.nombre} - `}
+                      {item.color.nombre}
+                    </td>
+                    <td className="p-3 text-right font-mono font-medium text-sm">
+                      {item.cantidad}
+                    </td>
+                    <td className="p-3 text-right">
+                      <Badge variant={item.cantidad === 0 ? 'destructive' : 'secondary'}>
+                        {item.cantidad === 0 ? 'Agotado' : 'Bajo'}
+                      </Badge>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between p-4 border-t">
+            <p className="text-sm text-muted-foreground">
+              Mostrando {(currentPage - 1) * itemsPerPage + 1} a{' '}
+              {Math.min(currentPage * itemsPerPage, filteredAlerts.length)} de{' '}
+              {filteredAlerts.length} registros
+            </p>
+            <div className="flex items-center gap-1">
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+              >
+                <ChevronLeft className="size-4" />
+              </Button>
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                <Button
+                  key={page}
+                  variant={currentPage === page ? 'default' : 'outline'}
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => setCurrentPage(page)}
+                >
+                  {page}
+                </Button>
+              ))}
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages}
+              >
+                <ChevronRight className="size-4" />
+              </Button>
+            </div>
           </div>
+        )}
+      </div>
+
+      {/* Recent Changes */}
+      <div className="bg-card text-card-foreground rounded-lg border">
+        <div className="flex items-center gap-2 p-4 border-b border-border/50">
+          <Clock className="size-4 text-muted-foreground" />
+          <h3 className="font-semibold text-base">Ultimos Cambios</h3>
+        </div>
+        <div className="p-4">
+          {ultimosCambios.length === 0 ? (
+            <p className="text-muted-foreground text-center py-4">No hay cambios recientes</p>
+          ) : (
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+              {ultimosCambios.map((log) => (
+                <div
+                  key={log.id}
+                  className="flex flex-col p-3 bg-muted/50 dark:bg-neutral-800/50 rounded-lg border"
+                >
+                  <div className="flex items-center gap-2 mb-1">
+                    <Badge
+                      variant={
+                        log.accion === 'CREATE'
+                          ? 'default'
+                          : log.accion === 'UPDATE'
+                            ? 'secondary'
+                            : 'destructive'
+                      }
+                      className="text-[10px] px-1.5"
+                    >
+                      {log.accion}
+                    </Badge>
+                    <span className="text-xs text-muted-foreground capitalize">{log.tabla}</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground truncate">
+                    {log.usuario_email || 'Sistema'}
+                  </p>
+                  <span className="text-[10px] text-muted-foreground/70 mt-1">
+                    {formatFechaHora(log.created_at)}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </div>

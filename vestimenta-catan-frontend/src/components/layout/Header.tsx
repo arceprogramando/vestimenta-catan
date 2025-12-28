@@ -3,7 +3,8 @@
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useState } from 'react';
-import { Menu, ShoppingBag, LogIn, LogOut, Settings } from 'lucide-react';
+import { Menu, ShoppingBag, LogIn, LogOut, Settings, Moon, Sun } from 'lucide-react';
+import { useTheme } from 'next-themes';
 import { Button } from '@/components/ui/button';
 import {
   Sheet,
@@ -34,6 +35,7 @@ export function Header() {
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
   const { user, isAuthenticated, isHydrated, logout, fullName, isAdmin } = useAuth();
+  const { theme, setTheme } = useTheme();
 
   // No mostrar Header en rutas de admin (tiene su propio header)
   if (pathname.startsWith('/admin')) {
@@ -89,6 +91,16 @@ export function Header() {
 
           {/* Desktop Auth/User */}
           <div className="hidden md:flex items-center space-x-4">
+            {/* Theme Toggle */}
+            <button
+              onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
+              className="relative flex size-9 items-center justify-center rounded-md hover:bg-accent transition-colors cursor-pointer"
+            >
+              <Sun className="h-5 w-5 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
+              <Moon className="absolute h-5 w-5 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
+              <span className="sr-only">Cambiar tema</span>
+            </button>
+
             {!isHydrated ? (
               <div className="h-8 w-8 rounded-full bg-muted animate-pulse" />
             ) : isAuthenticated && user ? (
@@ -175,6 +187,19 @@ export function Header() {
                   <span>Vestimenta Catan</span>
                 </SheetTitle>
               </SheetHeader>
+
+              {/* Theme Toggle Mobile */}
+              <div className="flex items-center justify-between mt-4 px-2">
+                <span className="text-sm text-muted-foreground">Tema</span>
+                <button
+                  onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
+                  className="relative flex size-9 items-center justify-center rounded-md hover:bg-accent transition-colors cursor-pointer"
+                >
+                  <Sun className="h-5 w-5 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
+                  <Moon className="absolute h-5 w-5 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
+                  <span className="sr-only">Cambiar tema</span>
+                </button>
+              </div>
 
               <nav className="flex flex-col space-y-4 mt-8">
                 {navigation.map((item) => (

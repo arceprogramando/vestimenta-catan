@@ -71,6 +71,24 @@ export class DashboardController {
     return this.dashboardService.getProductosAgregadosPorDia(dias);
   }
 
+  @Get('charts/stock-por-producto')
+  @RequirePermission('dashboard.ver')
+  @ApiOperation({
+    summary:
+      'Obtener stock agregado por día separado por producto (gráfico multilinea)',
+  })
+  @ApiQuery({
+    name: 'dias',
+    required: false,
+    description: 'Cantidad de días hacia atrás',
+    example: 30,
+  })
+  async getStockAgregadoPorProducto(
+    @Query('dias', new DefaultValuePipe(30), ParseIntPipe) dias: number,
+  ) {
+    return this.dashboardService.getStockAgregadoPorProducto(dias);
+  }
+
   @Get('ultimos-cambios')
   @RequirePermission('dashboard.ver', 'auditoria.ver')
   @ApiOperation({ summary: 'Obtener los últimos cambios de auditoría' })

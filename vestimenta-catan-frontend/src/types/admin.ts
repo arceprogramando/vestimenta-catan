@@ -30,6 +30,21 @@ export interface ProductosAgregadosPorDia {
   total: number;
 }
 
+export interface ProductoLegend {
+  nombre: string;
+  color: string;
+}
+
+export interface StockAgregadoPorProducto {
+  fecha: string;
+  [productoNombre: string]: string | number;
+}
+
+export interface StockPorProductoResponse {
+  data: StockAgregadoPorProducto[];
+  productos: ProductoLegend[];
+}
+
 export interface AuditLog {
   id: string;
   tabla: string;

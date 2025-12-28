@@ -94,14 +94,26 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     message: string;
     error: string;
   } {
-    const error = exception as { code?: string; meta?: { target?: string[] } };
+    const error = exception as {
+      code?: string;
+      meta?: { target?: string[]; modelName?: string };
+    };
 
     if (error.code === 'P2002') {
       // Unique constraint violation
-      const field = error.meta?.target?.[0] || 'campo';
+      // Log full error for debugging
+      console.error(
+        '[P2002 Debug] Full error meta:',
+        JSON.stringify(error, null, 2),
+      );
+      const fields = error.meta?.target || ['campo'];
+      const model = error.meta?.modelName || 'registro';
+      const fieldList = Array.isArray(fields)
+        ? fields.join(', ')
+        : String(fields);
       return {
         statusCode: HttpStatus.CONFLICT,
-        message: `El ${field} ya existe`,
+        message: `Ya existe un ${model} con el mismo valor de: ${fieldList}`,
         error: 'Conflict',
       };
     }

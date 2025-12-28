@@ -14,7 +14,8 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Home, LogOut, User, Shield, LayoutDashboard, Bell } from 'lucide-react';
+import { Home, LogOut, User, Shield, LayoutDashboard, Bell, Moon, Sun } from 'lucide-react';
+import { useTheme } from 'next-themes';
 
 const roleLabels: Record<
   string,
@@ -28,6 +29,7 @@ const roleLabels: Record<
 
 export function AdminHeader() {
   const { user, logout, fullName, isSuperAdmin } = useAuth();
+  const { theme, setTheme } = useTheme();
 
   if (!user) return null;
 
@@ -64,6 +66,18 @@ export function AdminHeader() {
         <Button variant="ghost" size="icon" className="relative">
           <Bell className="size-5" />
           <span className="sr-only">Notificaciones</span>
+        </Button>
+
+        {/* Theme Toggle */}
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
+          className="relative cursor-pointer"
+        >
+          <Sun className="size-5 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
+          <Moon className="absolute size-5 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
+          <span className="sr-only">Cambiar tema</span>
         </Button>
 
         <div className="h-5 w-px bg-border mx-2 hidden sm:block" />

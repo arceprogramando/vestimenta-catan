@@ -43,6 +43,16 @@ interface Reserva {
   };
 }
 
+interface PaginatedResponse<T> {
+  data: T[];
+  meta: {
+    total: number;
+    limit: number;
+    offset: number;
+    hasMore: boolean;
+  };
+}
+
 interface ErrorResponse {
   message: string;
   statusCode: number;
@@ -322,9 +332,12 @@ describe('Reservas (E2E)', () => {
         .set('Cookie', `accessToken=${adminTokens.accessToken}`)
         .expect(200);
 
-      const body = response.body as Reserva[];
-      expect(Array.isArray(body)).toBe(true);
-      expect(body.length).toBe(2);
+      const body = response.body as PaginatedResponse<Reserva>;
+      expect(body.data).toBeDefined();
+      expect(Array.isArray(body.data)).toBe(true);
+      expect(body.data.length).toBe(2);
+      expect(body.meta).toBeDefined();
+      expect(body.meta.total).toBe(2);
     });
 
     it('debería rechazar listado para usuario normal (solo admin)', async () => {
@@ -346,8 +359,9 @@ describe('Reservas (E2E)', () => {
         .set('Cookie', `accessToken=${adminTokens.accessToken}`)
         .expect(200);
 
-      const body = response.body as Reserva[];
-      expect(body.length).toBe(1);
+      const body = response.body as PaginatedResponse<Reserva>;
+      expect(body.data.length).toBe(1);
+      expect(body.meta.total).toBe(1);
     });
 
     it('debería incluir reservas eliminadas con query param', async () => {
@@ -361,8 +375,9 @@ describe('Reservas (E2E)', () => {
         .set('Cookie', `accessToken=${adminTokens.accessToken}`)
         .expect(200);
 
-      const body = response.body as Reserva[];
-      expect(body.length).toBe(2);
+      const body = response.body as PaginatedResponse<Reserva>;
+      expect(body.data.length).toBe(2);
+      expect(body.meta.total).toBe(2);
     });
   });
 

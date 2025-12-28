@@ -24,7 +24,6 @@ import type { RequestUser } from '../auth/decorators/current-user.decorator';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { ReservasService } from './reservas.service';
 import type { SoftDeleteDto } from '../common/interfaces';
-import { PaginationQueryDto } from '../common/dto';
 import { CreateReservaDto } from './dto/create-reserva.dto';
 import { UpdateReservaDto } from './dto/update-reserva.dto';
 import { estado_reserva } from '@prisma/client';
@@ -63,6 +62,24 @@ export class ReservasController {
     summary: 'Obtener todas las reservas paginadas (solo admin)',
   })
   @ApiQuery({
+    name: 'limit',
+    required: false,
+    type: Number,
+    description: 'Número de registros por página (default: 20)',
+  })
+  @ApiQuery({
+    name: 'offset',
+    required: false,
+    type: Number,
+    description: 'Número de registros a saltar (default: 0)',
+  })
+  @ApiQuery({
+    name: 'search',
+    required: false,
+    type: String,
+    description: 'Texto de búsqueda',
+  })
+  @ApiQuery({
     name: 'includeDeleted',
     required: false,
     type: Boolean,
@@ -76,13 +93,17 @@ export class ReservasController {
   })
   @ApiResponse({ status: 200, description: 'Lista de reservas paginada.' })
   findAll(
-    @Query() pagination: PaginationQueryDto,
+    @Query('limit') limit?: string,
+    @Query('offset') offset?: string,
+    @Query('search') search?: string,
     @Query('includeDeleted') includeDeleted?: string,
-    @Query('estado') estado?: estado_reserva,
+    @Query('estado') estado?: string,
   ) {
     return this.reservasService.findAllPaginated({
-      ...pagination,
-      estado,
+      limit: limit ? parseInt(limit, 10) : 20,
+      offset: offset ? parseInt(offset, 10) : 0,
+      search,
+      estado: estado as estado_reserva | undefined,
       includeDeleted: includeDeleted === 'true',
     });
   }

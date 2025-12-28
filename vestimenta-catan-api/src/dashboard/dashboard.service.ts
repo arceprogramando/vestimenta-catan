@@ -26,6 +26,11 @@ export interface StockPorCategoria {
   stockBajo: number;
 }
 
+export interface ProductosAgregadosPorDia {
+  fecha: string;
+  total: number;
+}
+
 @Injectable()
 export class DashboardService {
   constructor(private readonly prisma: PrismaService) {}
@@ -237,6 +242,52 @@ export class DashboardService {
       ...log,
       id: log.id.toString(),
     }));
+  }
+
+  /**
+   * Obtiene datos para gráfico de productos agregados por día (últimos N días)
+   * Cuenta variantes de productos creadas por día
+   */
+  async getProductosAgregadosPorDia(
+    dias: number = 30,
+  ): Promise<ProductosAgregadosPorDia[]> {
+    const desde = new Date();
+    desde.setDate(desde.getDate() - dias);
+    desde.setHours(0, 0, 0, 0);
+
+    const variantes = await this.prisma.producto_variantes.findMany({
+      where: {
+        created_at: { gte: desde },
+      },
+      select: {
+        created_at: true,
+      },
+    });
+
+    // Agrupar por día
+    const porDia: Record<string, ProductosAgregadosPorDia> = {};
+
+    // Inicializar todos los días
+    for (let i = 0; i <= dias; i++) {
+      const fecha = new Date();
+      fecha.setDate(fecha.getDate() - i);
+      const key = fecha.toISOString().split('T')[0];
+      porDia[key] = {
+        fecha: key,
+        total: 0,
+      };
+    }
+
+    // Contar variantes creadas
+    for (const variante of variantes) {
+      const fecha = variante.created_at.toISOString().split('T')[0];
+      if (porDia[fecha]) {
+        porDia[fecha].total++;
+      }
+    }
+
+    // Ordenar por fecha ascendente
+    return Object.values(porDia).sort((a, b) => a.fecha.localeCompare(b.fecha));
   }
 
   /**

@@ -50,6 +50,32 @@ services:
       retries: 10
 
   # ===========================================
+  # Base de datos de PRODUCCIÓN
+  # Puerto: 5436
+  # Base de datos de producción local
+  # ===========================================
+  db_prod:
+    image: postgres:17-alpine
+    container_name: pg17_prod
+    restart: unless-stopped
+    env_file:
+      - .env
+    ports:
+      - '5436:5432'
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}_prod
+      TZ: ${TZ}
+    volumes:
+      - pg17_prod_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}_prod']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # ===========================================
   # Base de datos de STAGING/HOMOLOGACIÓN
   # Puerto: 5435
   # Copia de producción para QA manual y demos
@@ -91,7 +117,7 @@ services:
 
   # ===========================================
   # Servicio de BACKUP AUTOMÁTICO DIARIO
-  # Hace backup de desarrollo y staging cada 24h
+  # Hace backup de desarrollo, staging y producción cada 24h
   # Los backups se guardan en ./backups/
   # ===========================================
   backup:
@@ -107,6 +133,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      db_prod:
+        condition: service_healthy
       db_staging_homologacion:
         condition: service_healthy
     command: >
@@ -119,6 +147,10 @@ services:
         echo 'Backing up DEVELOPMENT database...' &&
         pg_dump -h db -U $${POSTGRES_USER} -d $${POSTGRES_DB} > /backups/dev_$${DATE}.sql &&
         echo 'Development backup completed: dev_'$${DATE}'.sql' &&
+
+        echo 'Backing up PRODUCTION database...' &&
+        pg_dump -h db_prod -U $${POSTGRES_USER} -d $${POSTGRES_DB}_prod > /backups/prod_$${DATE}.sql &&
+        echo 'Production backup completed: prod_'$${DATE}'.sql' &&
 
         echo 'Backing up STAGING database...' &&
         pg_dump -h db_staging_homologacion -U $${POSTGRES_USER} -d $${POSTGRES_DB}_staging_homologacion > /backups/staging_$${DATE}.sql &&
@@ -136,5 +168,6 @@ services:
 volumes:
   pg17_data:
   pg17_test_data:
+  pg17_prod_data:
   pg17_staging_homologacion_data:
   pgadmin_data:

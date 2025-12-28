@@ -5,7 +5,6 @@ import { StatsCard } from '@/components/admin/StatsCard';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
-  Loader2,
   Package,
   Users,
   ShoppingCart,
@@ -33,6 +32,7 @@ import type {
   StockPorCategoria,
   StockBajoAlerta,
   AuditLog,
+  ProductosAgregadosPorDia,
 } from '@/types/admin';
 import {
   AreaChart,
@@ -101,6 +101,7 @@ export default function AdminDashboardPage() {
   const { theme } = useTheme();
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [reservasChart, setReservasChart] = useState<ReservasPorDia[]>([]);
+  const [productosChart, setProductosChart] = useState<ProductosAgregadosPorDia[]>([]);
   const [stockChart, setStockChart] = useState<StockPorCategoria[]>([]);
   const [stockBajo, setStockBajo] = useState<StockBajoAlerta[]>([]);
   const [ultimosCambios, setUltimosCambios] = useState<AuditLog[]>([]);
@@ -117,9 +118,10 @@ export default function AdminDashboardPage() {
         setLoading(true);
         setError(null);
 
-        const [statsRes, reservasRes, stockRes, alertasRes, cambiosRes] = await Promise.all([
+        const [statsRes, reservasRes, productosRes, stockRes, alertasRes, cambiosRes] = await Promise.all([
           api.get<DashboardStats>('/dashboard/stats'),
           api.get<ReservasPorDia[]>(`/dashboard/charts/reservas?dias=${period}`),
+          api.get<ProductosAgregadosPorDia[]>(`/dashboard/charts/productos-agregados?dias=${period}`),
           api.get<StockPorCategoria[]>('/dashboard/charts/stock'),
           api.get<StockBajoAlerta[]>('/dashboard/alertas/stock-bajo?umbral=5&limit=10'),
           api.get<AuditLog[]>('/dashboard/ultimos-cambios?limit=5'),
@@ -127,6 +129,7 @@ export default function AdminDashboardPage() {
 
         setStats(statsRes.data);
         setReservasChart(reservasRes.data);
+        setProductosChart(productosRes.data);
         setStockChart(stockRes.data);
         setStockBajo(alertasRes.data);
         setUltimosCambios(cambiosRes.data);
@@ -334,6 +337,53 @@ export default function AdminDashboardPage() {
                     strokeWidth={2}
                     fill="url(#gradientTotal)"
                     name="Total"
+                    dot={false}
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        </div>
+
+        {/* Productos Agregados Chart */}
+        <div className="bg-card text-card-foreground rounded-lg border flex-1">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4 border-b border-border/50">
+            <h3 className="font-medium text-sm sm:text-base">Productos Agregados</h3>
+          </div>
+          <div className="p-4">
+            <div className="h-50 sm:h-62.5 w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart
+                  data={productosChart}
+                  margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" stroke={gridColor} vertical={false} />
+                  <XAxis
+                    dataKey="fecha"
+                    tickFormatter={formatFechaCorta}
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fontSize: 10, fill: axisColor }}
+                  />
+                  <YAxis
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fontSize: 10, fill: axisColor }}
+                  />
+                  <Tooltip content={<CustomTooltip />} />
+                  <defs>
+                    <linearGradient id="gradientProductos" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#22c55e" stopOpacity={0.3} />
+                      <stop offset="100%" stopColor="#22c55e" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <Area
+                    type="monotone"
+                    dataKey="total"
+                    stroke="#22c55e"
+                    strokeWidth={2}
+                    fill="url(#gradientProductos)"
+                    name="Productos"
                     dot={false}
                   />
                 </AreaChart>

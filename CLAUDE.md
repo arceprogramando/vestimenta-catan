@@ -53,9 +53,11 @@ docker-compose down       # Stop services
 | Development | `pg17` | 5433 | `comercio_electronico_db` | Local development |
 | Test (E2E) | `pg17_test` | 5434 | `comercio_electronico_db_test` | Automated E2E tests |
 | Staging | `pg17_staging_homologacion` | 5435 | `comercio_electronico_db_staging_homologacion` | QA and demos |
+| Production | `pg17_prod` | 5436 | `comercio_electronico_db_prod` | Production data |
 
 - pgAdmin available at http://localhost:8080
 - All databases start automatically with `docker-compose up -d`
+- Backups run daily for dev, staging and production (stored in `docker-postgres/backups/`)
 
 ### Prisma (from backend directory)
 

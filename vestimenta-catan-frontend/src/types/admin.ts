@@ -25,6 +25,11 @@ export interface StockPorCategoria {
   stockBajo: number;
 }
 
+export interface ProductosAgregadosPorDia {
+  fecha: string;
+  total: number;
+}
+
 export interface AuditLog {
   id: string;
   tabla: string;

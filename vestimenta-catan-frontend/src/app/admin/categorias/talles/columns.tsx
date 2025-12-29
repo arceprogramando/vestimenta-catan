@@ -44,17 +44,6 @@ export const createColumns = ({
     },
   },
   {
-    accessorKey: "orden",
-    header: ({ column }) => (
-      <DataTableColumnHeader column={column} title="Orden" />
-    ),
-    cell: ({ row }) => (
-      <span className="text-muted-foreground">
-        {row.getValue("orden") ?? '-'}
-      </span>
-    ),
-  },
-  {
     id: "acciones",
     header: () => <div className="text-right">Acciones</div>,
     cell: ({ row }) => {

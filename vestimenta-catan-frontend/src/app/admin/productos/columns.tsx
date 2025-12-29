@@ -6,18 +6,7 @@ import { Button } from "@/components/ui/button"
 import { DataTableColumnHeader } from "@/components/ui/data-table"
 import { ProductImage } from "@/components/product-image"
 import { Edit, Trash2 } from "lucide-react"
-
-export interface Producto {
-  id: number
-  nombre: string
-  descripcion: string | null
-  genero: 'mujer' | 'hombre' | 'ninios'
-  thumbnail: string | null
-  precio: number | null
-  is_active: boolean
-  created_at: string
-  stock_total?: number
-}
+import { Producto } from "@/types/admin"
 
 const generoLabels: Record<string, string> = {
   mujer: 'Mujer',

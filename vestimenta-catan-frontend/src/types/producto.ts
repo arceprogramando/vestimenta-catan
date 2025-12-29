@@ -1,8 +1,2 @@
-export interface Producto {
-  id: number;
-  nombre: string;
-  genero: string;
-  descripcion: string;
-  thumbnail: string;
-  stock_total: number;
-}
+// Re-exportar desde admin.ts para mantener compatibilidad
+export type { Producto } from './admin'

@@ -5,21 +5,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { DataTableColumnHeader } from "@/components/ui/data-table"
 import { Edit, Trash2 } from "lucide-react"
-
-export interface Variante {
-  id: string
-  producto_id: number
-  talle_id: string | null
-  color_id: string
-  cantidad: number
-  producto: {
-    id: number
-    nombre: string
-    genero: string
-  }
-  talle: { id: string; nombre: string } | null
-  color: { id: string; nombre: string }
-}
+import { Variante } from "@/types/admin"
 
 const generoLabels: Record<string, string> = {
   mujer: 'Mujer',

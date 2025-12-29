@@ -1,4 +1,65 @@
-// Tipos para el Dashboard Admin
+// Tipos para el módulo Admin
+
+// ============================================
+// Entidades base
+// ============================================
+
+export interface Color {
+  id: number
+  nombre: string
+  is_active: boolean
+  created_at: string
+}
+
+export interface Talle {
+  id: number
+  nombre: string
+  orden: number | null
+  is_active: boolean
+  created_at: string
+}
+
+export interface Producto {
+  id: number
+  nombre: string
+  descripcion: string | null
+  genero: 'mujer' | 'hombre' | 'ninios'
+  thumbnail: string | null
+  precio: number | null
+  is_active: boolean
+  created_at: string
+  stock_total?: number
+}
+
+export interface Variante {
+  id: string
+  producto_id: number
+  talle_id: string | null
+  color_id: string
+  cantidad: number
+  producto: {
+    id: number
+    nombre: string
+    genero: string
+  }
+  talle: { id: string; nombre: string } | null
+  color: { id: string; nombre: string }
+}
+
+export interface Usuario {
+  id: number
+  email: string
+  nombre: string | null
+  apellido: string | null
+  rol: 'user' | 'empleado' | 'admin' | 'superadmin'
+  provider: string
+  is_active: boolean
+  created_at: string
+}
+
+// ============================================
+// Dashboard
+// ============================================
 
 export interface DashboardStats {
   totalProductos: number;
@@ -49,14 +110,14 @@ export interface AuditLog {
   id: string;
   tabla: string;
   registro_id: string;
-  accion: 'CREATE' | 'UPDATE' | 'DELETE' | 'RESTORE';
+  accion: string;
   datos_antes: Record<string, unknown> | null;
   datos_despues: Record<string, unknown> | null;
-  campos_modificados: string[];
-  usuario_id: number | null;
+  campos_modificados: string[] | null;
+  usuario_id?: number | null;
   usuario_email: string | null;
   ip_address: string | null;
-  user_agent: string | null;
+  user_agent?: string | null;
   created_at: string;
 }
 

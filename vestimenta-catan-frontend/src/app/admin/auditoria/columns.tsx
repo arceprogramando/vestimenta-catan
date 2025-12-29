@@ -5,19 +5,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { DataTableColumnHeader } from "@/components/ui/data-table"
 import { Eye } from "lucide-react"
-
-export interface AuditLog {
-  id: string
-  tabla: string
-  registro_id: string
-  accion: string
-  usuario_email: string | null
-  datos_antes: Record<string, unknown> | null
-  datos_despues: Record<string, unknown> | null
-  campos_modificados: string[] | null
-  ip_address: string | null
-  created_at: string
-}
+import { AuditLog } from "@/types/admin"
 
 const accionConfig: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
   CREATE: { label: 'Crear', variant: 'default' },

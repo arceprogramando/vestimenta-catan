@@ -4,13 +4,7 @@ import { ColumnDef } from "@tanstack/react-table"
 import { Button } from "@/components/ui/button"
 import { DataTableColumnHeader } from "@/components/ui/data-table"
 import { Edit, Trash2 } from "lucide-react"
-
-export interface Color {
-  id: number
-  nombre: string
-  is_active: boolean
-  created_at: string
-}
+import { Color } from "@/types/admin"
 
 interface ColumnsConfig {
   onEdit: (color: Color) => void

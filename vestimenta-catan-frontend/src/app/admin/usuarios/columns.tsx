@@ -5,17 +5,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { DataTableColumnHeader } from "@/components/ui/data-table"
 import { Edit, Eye, EyeOff } from "lucide-react"
-
-export interface Usuario {
-  id: number
-  email: string
-  nombre: string | null
-  apellido: string | null
-  rol: 'user' | 'empleado' | 'admin' | 'superadmin'
-  provider: string
-  is_active: boolean
-  created_at: string
-}
+import { Usuario } from "@/types/admin"
 
 const rolConfig: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
   superadmin: { label: 'Super Admin', variant: 'destructive' },

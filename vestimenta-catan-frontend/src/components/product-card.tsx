@@ -35,8 +35,8 @@ export function ProductCard({ producto }: ProductCardProps) {
           <span className="inline-block bg-secondary text-secondary-foreground text-xs px-2 py-1 rounded">
             {formatGenero(producto.genero)}
           </span>
-          <span className={`text-sm font-medium ${producto.stock_total > 0 ? 'text-green-600' : 'text-destructive'}`}>
-            {producto.stock_total > 0 ? `Stock: ${producto.stock_total}` : 'Sin stock'}
+          <span className={`text-sm font-medium ${(producto.stock_total ?? 0) > 0 ? 'text-green-600' : 'text-destructive'}`}>
+            {(producto.stock_total ?? 0) > 0 ? `Stock: ${producto.stock_total}` : 'Sin stock'}
           </span>
         </div>
       </CardContent>

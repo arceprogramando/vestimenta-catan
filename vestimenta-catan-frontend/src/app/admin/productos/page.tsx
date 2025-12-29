@@ -26,7 +26,8 @@ import { useRequireAdmin } from '@/hooks/use-auth';
 import { api } from '@/lib/axios';
 import { AxiosError } from 'axios';
 import { DataTable } from '@/components/ui/data-table';
-import { createColumns, Producto } from './columns';
+import { createColumns } from './columns';
+import { Producto } from '@/types/admin';
 import type { PaginatedResponse } from '@/types/pagination';
 
 const PAGE_SIZE = 20;

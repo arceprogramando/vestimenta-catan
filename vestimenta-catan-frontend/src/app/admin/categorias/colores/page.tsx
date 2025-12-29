@@ -17,7 +17,8 @@ import { Loader2, Plus, Palette, AlertTriangle } from 'lucide-react';
 import { useRequireAdmin } from '@/hooks/use-auth';
 import { api } from '@/lib/axios';
 import { DataTable } from '@/components/ui/data-table';
-import { createColumns, Color } from './columns';
+import { createColumns } from './columns';
+import { Color } from '@/types/admin';
 
 export default function AdminColoresPage() {
   const { isAdmin, isHydrated } = useRequireAdmin();

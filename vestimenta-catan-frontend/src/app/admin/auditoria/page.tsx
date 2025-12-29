@@ -22,7 +22,8 @@ import {
 import { useRequireAdmin } from '@/hooks/use-auth';
 import { api } from '@/lib/axios';
 import { DataTable } from '@/components/ui/data-table';
-import { createColumns, AuditLog } from './columns';
+import { createColumns } from './columns';
+import { AuditLog } from '@/types/admin';
 
 const accionConfig: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
   CREATE: { label: 'Crear', variant: 'default' },

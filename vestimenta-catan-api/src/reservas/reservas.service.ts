@@ -138,7 +138,7 @@ export class ReservasService {
           estado: (createReservaDto.estado as estado_reserva) || 'pendiente',
           notas: createReservaDto.notas,
           telefono_contacto: createReservaDto.telefono_contacto,
-          precio_unitario: precioUnitario,
+          precio_unitario: precioUnitario?.toNumber() ?? null,
           precio_total: precioTotal,
         },
         include: {

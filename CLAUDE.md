@@ -8,7 +8,8 @@ Vestimenta Catán is a full-stack inventory and reservation management system fo
 
 ## Tech Stack
 
-- **Frontend**: Next.js 15 (App Router, Turbopack), React 19, TypeScript, Tailwind CSS 4, Zustand, Radix UI
+- **Frontend**: Next.js 15 (App Router, Turbopack), React 19, TypeScript, Tailwind CSS 4, Zustand, shadcn/ui
+- **UI Reference**: [Square UI](https://github.com/ln-dev7/square-ui) - Open-source layouts built with Next.js and shadcn/ui
 - **Backend**: NestJS 11, TypeScript, Prisma 6, PostgreSQL 17
 - **Auth**: JWT (access + refresh tokens), Google OAuth, Passport.js
 - **Infrastructure**: Docker (PostgreSQL + pgAdmin)
@@ -137,7 +138,7 @@ Layer flow: Controllers → Services → Prisma ORM → PostgreSQL
 ### Frontend Structure
 
 - `app/` - Next.js App Router pages (SSR/SSG)
-- `components/ui/` - Radix UI primitive wrappers
+- `components/ui/` - shadcn/ui components (based on Radix UI primitives)
 - `stores/` - Zustand stores with persistence (`auth-store.ts`, `reservas-store.ts`)
 - `hooks/` - Custom hooks (`use-auth.ts`, `use-reservas.ts`)
 - `lib/axios.ts` - Axios clients:

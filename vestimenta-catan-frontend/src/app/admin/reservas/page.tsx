@@ -40,7 +40,7 @@ import {
 } from 'lucide-react';
 import { useRequireAdmin } from '@/hooks/use-auth';
 import { useReservas } from '@/hooks/use-reservas';
-import { Comprobante } from '@/components/reservas/Comprobante';
+import { Comprobante } from '@/app/admin/reservas/_components/comprobante';
 import { ProductImage } from '@/components/product-image';
 import type { Reserva, EstadoReserva } from '@/types/reserva';
 

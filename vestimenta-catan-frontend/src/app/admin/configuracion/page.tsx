@@ -8,11 +8,9 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import {
-  Settings,
   Bell,
   Shield,
   Database,
-  Mail,
   Save,
   Loader2,
   CheckCircle,

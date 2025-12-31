@@ -24,7 +24,7 @@ import { Loader2, Plus, Package, AlertTriangle } from 'lucide-react';
 import { useRequireAdmin } from '@/hooks/use-auth';
 import { api } from '@/lib/axios';
 import { DataTable } from '@/components/ui/data-table';
-import { createColumns } from './columns';
+import { createColumns } from './_components/columns';
 import { Variante } from '@/types/admin';
 import type { PaginatedResponse } from '@/types/pagination';
 

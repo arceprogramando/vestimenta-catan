@@ -1,46 +1,31 @@
-'use client';
-
-import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ShoppingBag, Loader2 } from 'lucide-react';
+import { ShoppingBag } from 'lucide-react';
 import { ProductCard } from '@/components/product-card';
 import { Producto } from '@/types/producto';
-import { publicApi } from '@/lib/axios';
 
-export default function Home() {
-  const [productos, setProductos] = useState<Producto[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api';
 
-  useEffect(() => {
-    const controller = new AbortController();
+async function getProductos(): Promise<Producto[]> {
+  try {
+    const res = await fetch(`${API_URL}/productos/stock-resumen`, {
+      next: { revalidate: 60 }, // Revalidar cada 60 segundos (ISR)
+    });
 
-    const fetchProductos = async () => {
-      try {
-        setError(null);
-        setLoading(true);
-        const response = await publicApi.get('/productos/stock-resumen', {
-          signal: controller.signal,
-        });
-        setProductos(response.data);
-      } catch (err) {
-        // No mostrar error si fue cancelado por cleanup
-        if (controller.signal.aborted) return;
-        setError(err instanceof Error ? err.message : 'Error desconocido');
-        console.error('Error fetching productos:', err);
-      } finally {
-        if (!controller.signal.aborted) {
-          setLoading(false);
-        }
-      }
-    };
+    if (!res.ok) {
+      throw new Error('Error al cargar productos');
+    }
 
-    fetchProductos();
+    return res.json();
+  } catch (error) {
+    console.error('Error fetching productos:', error);
+    return [];
+  }
+}
 
-    return () => controller.abort();
-  }, []);
+export default async function Home() {
+  const productos = await getProductos();
 
   return (
     <div className="min-h-screen">
@@ -70,31 +55,13 @@ export default function Home() {
             Nuestros Productos
           </h2>
 
-          {loading && (
-            <div className="flex items-center justify-center py-12">
-              <Loader2 className="h-8 w-8 animate-spin text-primary" />
-              <span className="ml-2">Cargando productos...</span>
-            </div>
-          )}
-
-          {error && (
-            <div className="text-center py-12">
-              <p className="text-destructive mb-2">Error: {error}</p>
-              <p className="text-sm text-muted-foreground">
-                Verifica que la API esté corriendo
-              </p>
-            </div>
-          )}
-
-          {!loading && !error && (
+          {productos.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {productos.map((producto) => (
                 <ProductCard key={producto.id} producto={producto} />
               ))}
             </div>
-          )}
-
-          {!loading && !error && productos.length === 0 && (
+          ) : (
             <div className="text-center py-12 text-muted-foreground">
               No hay productos disponibles
             </div>

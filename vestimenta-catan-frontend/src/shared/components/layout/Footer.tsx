@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { ShoppingBag, MapPin } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
-import { InstagramIcon, WhatsAppIcon, MercadoPagoIcon } from '@/components/icons/SocialIcons';
+import { InstagramIcon, WhatsAppIcon, MercadoPagoIcon } from './SocialIcons';
 
 // Numero de WhatsApp (sin el + ni espacios)
 const WHATSAPP_NUMBER = '5491150990913';

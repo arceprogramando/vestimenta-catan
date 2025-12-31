@@ -17,7 +17,7 @@ import { Loader2, Plus, Ruler, AlertTriangle } from 'lucide-react';
 import { useRequireAdmin } from '@/hooks/use-auth';
 import { api } from '@/lib/axios';
 import { DataTable } from '@/components/ui/data-table';
-import { createColumns } from './columns';
+import { createColumns } from './_components/columns';
 import { Talle } from '@/types/admin';
 
 export default function AdminTallesPage() {

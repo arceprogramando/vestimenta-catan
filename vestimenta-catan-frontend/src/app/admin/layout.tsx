@@ -1,8 +1,8 @@
 'use client';
 
 import { useRequireAdmin } from '@/hooks/use-auth';
-import { AdminSidebar } from '@/components/admin/AdminSidebar';
-import { AdminHeader } from '@/components/admin/AdminHeader';
+import { AdminSidebar } from './_components/admin-sidebar';
+import { AdminHeader } from './_components/admin-header';
 import { SidebarProvider } from '@/components/ui/sidebar';
 import { Loader2 } from 'lucide-react';
 

@@ -20,7 +20,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
-import { Loader2, Users, Shield } from 'lucide-react';
+import { Loader2, Shield } from 'lucide-react';
 import { useRequireAdmin, useAuth } from '@/hooks/use-auth';
 import { api } from '@/lib/axios';
 import { DataTable } from '@/components/ui/data-table';

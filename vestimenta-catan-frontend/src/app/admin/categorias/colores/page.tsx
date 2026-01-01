@@ -178,7 +178,6 @@ export default function AdminColoresPage() {
                 value={nombre}
                 onChange={(e) => setNombre(e.target.value)}
                 placeholder="Ej: Azul, Rojo, Negro..."
-                autoFocus
               />
             </div>
           </div>

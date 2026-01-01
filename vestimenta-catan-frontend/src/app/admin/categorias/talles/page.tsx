@@ -196,7 +196,6 @@ export default function AdminTallesPage() {
                 value={formData.nombre}
                 onChange={(e) => setFormData({ ...formData, nombre: e.target.value })}
                 placeholder="Ej: S, M, L, XL, 38, 40..."
-                autoFocus
               />
             </div>
             <div className="space-y-2">

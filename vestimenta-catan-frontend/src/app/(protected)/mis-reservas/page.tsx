@@ -182,7 +182,7 @@ export default function MisReservasPage() {
                         </p>
                       )}
                       {reserva.estado === 'confirmado' && reserva.fecha_confirmacion && (
-                        <p className="text-sm text-green-600 mt-2">
+                        <p className="text-sm text-success mt-2">
                           Confirmado el {formatFecha(reserva.fecha_confirmacion)}
                         </p>
                       )}

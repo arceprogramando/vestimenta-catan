@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Loader2, Eye, EyeOff } from 'lucide-react';
 import { useAuth, useRedirectIfAuthenticated } from '@/hooks/use-auth';
 import { GoogleLoginButton } from '@/app/(auth)/_components/google-login-button';
+import { FormError } from '@/components/form';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -48,11 +49,7 @@ export default function LoginPage() {
       </CardHeader>
       <form onSubmit={handleSubmit}>
         <CardContent className="space-y-4">
-          {(error || googleError) && (
-            <div className="p-3 text-sm text-destructive bg-destructive/10 rounded-md">
-              {error || googleError}
-            </div>
-          )}
+          <FormError id="login-error" message={error || googleError} />
 
           <GoogleLoginButton onError={(err) => { clearError(); setGoogleError(err); }} />
 
@@ -77,6 +74,8 @@ export default function LoginPage() {
               onChange={(e) => setEmail(e.target.value)}
               required
               disabled={isLoading}
+              aria-describedby={error || googleError ? 'login-error' : undefined}
+              aria-invalid={!!(error || googleError)}
             />
           </div>
 
@@ -91,6 +90,8 @@ export default function LoginPage() {
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 disabled={isLoading}
+                aria-describedby={error || googleError ? 'login-error' : undefined}
+                aria-invalid={!!(error || googleError)}
               />
               <Button
                 type="button"
@@ -98,11 +99,13 @@ export default function LoginPage() {
                 size="icon"
                 className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
                 onClick={() => setShowPassword(!showPassword)}
+                aria-label={showPassword ? 'Ocultar contrasena' : 'Mostrar contrasena'}
+                aria-pressed={showPassword}
               >
                 {showPassword ? (
-                  <EyeOff className="h-4 w-4 text-muted-foreground" />
+                  <EyeOff className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
                 ) : (
-                  <Eye className="h-4 w-4 text-muted-foreground" />
+                  <Eye className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
                 )}
               </Button>
             </div>
@@ -116,7 +119,7 @@ export default function LoginPage() {
           </Button>
           <p className="text-sm text-muted-foreground text-center">
             No tienes cuenta?{' '}
-            <Link href="/registro" className="text-primary hover:underline">
+            <Link href="/registro" className="text-primary underline underline-offset-4 hover:text-primary/80">
               Registrate aqui
             </Link>
           </p>

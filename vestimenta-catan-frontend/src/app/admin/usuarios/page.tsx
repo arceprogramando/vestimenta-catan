@@ -186,7 +186,7 @@ export default function AdminUsuariosPage() {
         <Card>
           <CardHeader className="pb-2">
             <CardDescription>Empleados</CardDescription>
-            <CardTitle className="text-3xl text-green-600">{empleados}</CardTitle>
+            <CardTitle className="text-3xl text-success">{empleados}</CardTitle>
           </CardHeader>
         </Card>
       </div>
@@ -198,19 +198,10 @@ export default function AdminUsuariosPage() {
           <CardDescription>Lista de usuarios registrados</CardDescription>
         </CardHeader>
         <CardContent>
-          {isLoading ? (
-            <div className="flex items-center justify-center py-12">
-              <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            </div>
-          ) : error ? (
+          {error ? (
             <div className="text-center py-12">
               <p className="text-destructive mb-4">{error}</p>
               <Button onClick={fetchUsuarios}>Reintentar</Button>
-            </div>
-          ) : usuarios.length === 0 ? (
-            <div className="text-center py-12">
-              <Users className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
-              <p className="text-muted-foreground">No hay usuarios</p>
             </div>
           ) : (
             <DataTable

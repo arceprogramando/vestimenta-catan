@@ -247,7 +247,7 @@ export default function AdminStockPage() {
         <Card>
           <CardHeader className="pb-2">
             <CardDescription>Stock Total</CardDescription>
-            <CardTitle className="text-3xl text-green-600">{stockTotal}</CardTitle>
+            <CardTitle className="text-3xl text-success">{stockTotal}</CardTitle>
           </CardHeader>
         </Card>
         <Card>
@@ -265,19 +265,10 @@ export default function AdminStockPage() {
           <CardDescription>Stock por producto, talle y color</CardDescription>
         </CardHeader>
         <CardContent>
-          {isLoading ? (
-            <div className="flex items-center justify-center py-12">
-              <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            </div>
-          ) : error ? (
+          {error ? (
             <div className="text-center py-12">
               <p className="text-destructive mb-4">{error}</p>
               <Button onClick={fetchVariantes}>Reintentar</Button>
-            </div>
-          ) : variantes.length === 0 ? (
-            <div className="text-center py-12">
-              <Package className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
-              <p className="text-muted-foreground">No hay variantes</p>
             </div>
           ) : (
             <DataTable

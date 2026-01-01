@@ -275,7 +275,7 @@ export default function AdminReservasPage() {
         <Card>
           <CardHeader className="pb-2">
             <CardDescription>Completados</CardDescription>
-            <CardTitle className="text-3xl text-green-600">
+            <CardTitle className="text-3xl text-success">
               {completadas}
             </CardTitle>
           </CardHeader>

@@ -210,19 +210,10 @@ export default function AdminProductosPage() {
           <CardDescription>Lista de productos del catalogo</CardDescription>
         </CardHeader>
         <CardContent>
-          {isLoading ? (
-            <div className="flex items-center justify-center py-12">
-              <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            </div>
-          ) : error ? (
+          {error ? (
             <div className="text-center py-12">
               <p className="text-destructive mb-4">{error}</p>
               <Button onClick={fetchProductos}>Reintentar</Button>
-            </div>
-          ) : productos.length === 0 ? (
-            <div className="text-center py-12">
-              <Package className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
-              <p className="text-muted-foreground">No hay productos</p>
             </div>
           ) : (
             <DataTable

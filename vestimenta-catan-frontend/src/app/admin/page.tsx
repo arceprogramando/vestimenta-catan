@@ -40,11 +40,8 @@ import {
 import { api } from '@/lib/axios';
 import type {
   DashboardStats,
-  ReservasPorDia,
-  StockPorCategoria,
   StockBajoAlerta,
   AuditLog,
-  ProductosAgregadosPorDia,
   StockPorProductoResponse,
 } from '@/types/admin';
 import {
@@ -136,9 +133,6 @@ export default function AdminDashboardPage() {
   const { fullName } = useAuth();
   const { theme } = useTheme();
   const [stats, setStats] = useState<DashboardStats | null>(null);
-  const [reservasChart, setReservasChart] = useState<ReservasPorDia[]>([]);
-  const [productosChart, setProductosChart] = useState<ProductosAgregadosPorDia[]>([]);
-  const [stockChart, setStockChart] = useState<StockPorCategoria[]>([]);
   const [stockPorProducto, setStockPorProducto] = useState<StockPorProductoResponse | null>(null);
   const [stockBajo, setStockBajo] = useState<StockBajoAlerta[]>([]);
   const [ultimosCambios, setUltimosCambios] = useState<AuditLog[]>([]);
@@ -146,6 +140,7 @@ export default function AdminDashboardPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [period, setPeriod] = useState<Period>('30');
+  const [chartReady, setChartReady] = useState(false);
 
   // Table state
   const [searchTerm, setSearchTerm] = useState('');
@@ -158,26 +153,26 @@ export default function AdminDashboardPage() {
   const axisColor = theme === 'dark' ? '#71717a' : '#868c98';
   const gridColor = theme === 'dark' ? '#3f3f46' : '#e2e4e9';
 
+  // Delay chart render to avoid ResponsiveContainer warning
+  useEffect(() => {
+    const timer = setTimeout(() => setChartReady(true), 0);
+    return () => clearTimeout(timer);
+  }, []);
+
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
         setLoading(true);
         setError(null);
 
-        const [statsRes, reservasRes, productosRes, stockRes, stockProdRes, alertasRes, cambiosRes] = await Promise.all([
+        const [statsRes, stockProdRes, alertasRes, cambiosRes] = await Promise.all([
           api.get<DashboardStats>('/dashboard/stats'),
-          api.get<ReservasPorDia[]>(`/dashboard/charts/reservas?dias=${period}`),
-          api.get<ProductosAgregadosPorDia[]>(`/dashboard/charts/productos-agregados?dias=${period}`),
-          api.get<StockPorCategoria[]>('/dashboard/charts/stock'),
           api.get<StockPorProductoResponse>(`/dashboard/charts/stock-por-producto?dias=${period}`),
           api.get<StockBajoAlerta[]>('/dashboard/alertas/stock-bajo?umbral=5&limit=10'),
           api.get<AuditLog[]>('/dashboard/ultimos-cambios?limit=5'),
         ]);
 
         setStats(statsRes.data);
-        setReservasChart(reservasRes.data);
-        setProductosChart(productosRes.data);
-        setStockChart(stockRes.data);
         setStockPorProducto(stockProdRes.data);
         setStockBajo(alertasRes.data);
         setUltimosCambios(cambiosRes.data);
@@ -444,8 +439,8 @@ export default function AdminDashboardPage() {
 
           <div className="p-4">
             <div className="h-72 sm:h-80 w-full">
-              {stockPorProducto && stockPorProducto.productos.length > 0 ? (
-                <ResponsiveContainer width="100%" height="100%">
+              {chartReady && stockPorProducto && stockPorProducto.productos.length > 0 ? (
+                <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                   <LineChart
                     data={stockPorProducto.data}
                     margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
@@ -589,38 +584,56 @@ export default function AdminDashboardPage() {
 
         {/* Table */}
         <div className="overflow-x-auto">
-          <table className="w-full">
+          <table className="w-full" aria-label="Productos con stock bajo">
+            <caption className="sr-only">
+              Lista de productos con stock bajo que necesitan reposicion
+            </caption>
             <thead>
               <tr className="border-b bg-muted/50">
-                <th className="text-left p-3 font-medium text-sm">
+                <th
+                  scope="col"
+                  className="text-left p-3 font-medium text-sm"
+                  aria-sort={sortField === 'nombre' ? (sortDirection === 'asc' ? 'ascending' : 'descending') : 'none'}
+                >
                   <button
                     onClick={() => handleSort('nombre')}
                     className="flex items-center gap-1 hover:text-primary transition-colors"
+                    aria-label={`Ordenar por producto${sortField === 'nombre' ? `, actualmente ${sortDirection === 'asc' ? 'ascendente' : 'descendente'}` : ''}`}
                   >
                     Producto
-                    <ArrowUpDown className="size-3" />
+                    <ArrowUpDown className="size-3" aria-hidden="true" />
                   </button>
                 </th>
-                <th className="text-left p-3 font-medium text-sm hidden sm:table-cell">
+                <th
+                  scope="col"
+                  className="text-left p-3 font-medium text-sm hidden sm:table-cell"
+                  aria-sort={sortField === 'genero' ? (sortDirection === 'asc' ? 'ascending' : 'descending') : 'none'}
+                >
                   <button
                     onClick={() => handleSort('genero')}
                     className="flex items-center gap-1 hover:text-primary transition-colors"
+                    aria-label={`Ordenar por genero${sortField === 'genero' ? `, actualmente ${sortDirection === 'asc' ? 'ascendente' : 'descendente'}` : ''}`}
                   >
                     Genero
-                    <ArrowUpDown className="size-3" />
+                    <ArrowUpDown className="size-3" aria-hidden="true" />
                   </button>
                 </th>
-                <th className="text-left p-3 font-medium text-sm">Variante</th>
-                <th className="text-right p-3 font-medium text-sm">
+                <th scope="col" className="text-left p-3 font-medium text-sm">Variante</th>
+                <th
+                  scope="col"
+                  className="text-right p-3 font-medium text-sm"
+                  aria-sort={sortField === 'totalStock' ? (sortDirection === 'asc' ? 'ascending' : 'descending') : 'none'}
+                >
                   <button
                     onClick={() => handleSort('totalStock')}
                     className="flex items-center gap-1 ml-auto hover:text-primary transition-colors"
+                    aria-label={`Ordenar por stock${sortField === 'totalStock' ? `, actualmente ${sortDirection === 'asc' ? 'ascendente' : 'descendente'}` : ''}`}
                   >
                     Stock
-                    <ArrowUpDown className="size-3" />
+                    <ArrowUpDown className="size-3" aria-hidden="true" />
                   </button>
                 </th>
-                <th className="text-right p-3 font-medium text-sm">Estado</th>
+                <th scope="col" className="text-right p-3 font-medium text-sm">Estado</th>
               </tr>
             </thead>
             <tbody>
@@ -683,15 +696,16 @@ export default function AdminDashboardPage() {
               {Math.min(currentPage * itemsPerPage, filteredAlerts.length)} de{' '}
               {filteredAlerts.length} registros
             </p>
-            <div className="flex items-center gap-1">
+            <nav className="flex items-center gap-1" aria-label="Paginacion de tabla">
               <Button
                 variant="outline"
                 size="icon"
                 className="h-8 w-8"
                 onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                 disabled={currentPage === 1}
+                aria-label="Ir a la pagina anterior"
               >
-                <ChevronLeft className="size-4" />
+                <ChevronLeft className="size-4" aria-hidden="true" />
               </Button>
               {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
                 <Button
@@ -700,6 +714,8 @@ export default function AdminDashboardPage() {
                   size="icon"
                   className="h-8 w-8"
                   onClick={() => setCurrentPage(page)}
+                  aria-label={`Ir a la pagina ${page}`}
+                  aria-current={currentPage === page ? 'page' : undefined}
                 >
                   {page}
                 </Button>
@@ -710,10 +726,11 @@ export default function AdminDashboardPage() {
                 className="h-8 w-8"
                 onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
                 disabled={currentPage === totalPages}
+                aria-label="Ir a la pagina siguiente"
               >
-                <ChevronRight className="size-4" />
+                <ChevronRight className="size-4" aria-hidden="true" />
               </Button>
-            </div>
+            </nav>
           </div>
         )}
       </div>

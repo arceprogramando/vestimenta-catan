@@ -2,13 +2,14 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Menu, ShoppingBag, LogIn, LogOut, Settings, Moon, Sun } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { Button } from '@/components/ui/button';
 import {
   Sheet,
   SheetContent,
+  SheetDescription,
   SheetHeader,
   SheetTitle,
   SheetTrigger,
@@ -34,8 +35,14 @@ export function Header() {
   const pathname = usePathname();
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const { user, isAuthenticated, isHydrated, logout, fullName, isAdmin } = useAuth();
-  const { theme, setTheme } = useTheme();
+  const { setTheme, resolvedTheme } = useTheme();
+
+  // Evitar hydration mismatch con next-themes
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // No mostrar Header en rutas de admin (tiene su propio header)
   if (pathname.startsWith('/admin')) {
@@ -75,7 +82,10 @@ export function Header() {
           </Link>
 
           {/* Desktop Navigation - Centered Absolutely */}
-          <nav className="hidden md:flex items-center justify-center space-x-6 absolute left-1/2 -translate-x-1/2">
+          <nav
+            className="hidden md:flex items-center justify-center space-x-6 absolute left-1/2 -translate-x-1/2"
+            aria-label="Navegacion principal"
+          >
             {navigation.map((item) => (
               <Link
                 key={item.name}
@@ -83,6 +93,7 @@ export function Header() {
                 className={`text-sm font-medium transition-colors hover:text-primary ${
                   isActive(item.href) ? 'text-primary' : 'text-muted-foreground'
                 }`}
+                aria-current={isActive(item.href) ? 'page' : undefined}
               >
                 {item.name}
               </Link>
@@ -93,11 +104,13 @@ export function Header() {
           <div className="hidden md:flex items-center space-x-4">
             {/* Theme Toggle */}
             <button
-              onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
+              onClick={() => setTheme(resolvedTheme === 'light' ? 'dark' : 'light')}
               className="relative flex size-9 items-center justify-center rounded-md hover:bg-accent transition-colors cursor-pointer"
+              aria-label={mounted ? (resolvedTheme === 'light' ? 'Cambiar a modo oscuro' : 'Cambiar a modo claro') : 'Cambiar tema'}
+              aria-pressed={mounted ? resolvedTheme === 'dark' : undefined}
             >
-              <Sun className="h-5 w-5 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
-              <Moon className="absolute h-5 w-5 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
+              <Sun className="h-5 w-5 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" aria-hidden="true" />
+              <Moon className="absolute h-5 w-5 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" aria-hidden="true" />
               <span className="sr-only">Cambiar tema</span>
             </button>
 
@@ -186,22 +199,27 @@ export function Header() {
                   <ShoppingBag className="h-5 w-5" />
                   <span>Vestimenta Catan</span>
                 </SheetTitle>
+                <SheetDescription className="sr-only">
+                  Menu de navegacion principal
+                </SheetDescription>
               </SheetHeader>
 
               {/* Theme Toggle Mobile */}
               <div className="flex items-center justify-between mt-4 px-2">
                 <span className="text-sm text-muted-foreground">Tema</span>
                 <button
-                  onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
+                  onClick={() => setTheme(resolvedTheme === 'light' ? 'dark' : 'light')}
                   className="relative flex size-9 items-center justify-center rounded-md hover:bg-accent transition-colors cursor-pointer"
+                  aria-label={mounted ? (resolvedTheme === 'light' ? 'Cambiar a modo oscuro' : 'Cambiar a modo claro') : 'Cambiar tema'}
+                  aria-pressed={mounted ? resolvedTheme === 'dark' : undefined}
                 >
-                  <Sun className="h-5 w-5 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
-                  <Moon className="absolute h-5 w-5 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
+                  <Sun className="h-5 w-5 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" aria-hidden="true" />
+                  <Moon className="absolute h-5 w-5 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" aria-hidden="true" />
                   <span className="sr-only">Cambiar tema</span>
                 </button>
               </div>
 
-              <nav className="flex flex-col space-y-4 mt-8">
+              <nav className="flex flex-col space-y-4 mt-8" aria-label="Navegacion movil">
                 {navigation.map((item) => (
                   <Link
                     key={item.name}
@@ -212,6 +230,7 @@ export function Header() {
                         ? 'text-primary bg-primary/10'
                         : 'text-muted-foreground'
                     }`}
+                    aria-current={isActive(item.href) ? 'page' : undefined}
                   >
                     {item.name}
                   </Link>

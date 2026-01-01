@@ -58,6 +58,7 @@ interface DataTableProps<TData, TValue> {
   onPageChange?: (page: number) => void
   onPageSizeChange?: (pageSize: number) => void
   onSearchChange?: (search: string) => void
+  onSortingChange?: (sorting: SortingState) => void
   isLoading?: boolean
 }
 
@@ -75,6 +76,7 @@ export function DataTable<TData, TValue>({
   onPageChange,
   onPageSizeChange,
   onSearchChange,
+  onSortingChange: onSortingChangeExternal,
   isLoading = false,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = React.useState<SortingState>([])
@@ -94,11 +96,11 @@ export function DataTable<TData, TValue>({
       if (searchTimeoutRef.current) {
         clearTimeout(searchTimeoutRef.current)
       }
-      // Debounce 300ms
+      // Debounce 400ms
       searchTimeoutRef.current = setTimeout(() => {
         onSearchChange(value)
         onPageChange?.(0) // Reset to first page on search
-      }, 300)
+      }, 400)
     }
   }, [serverSide, onSearchChange, onPageChange])
 
@@ -115,19 +117,31 @@ export function DataTable<TData, TValue>({
     ? Math.ceil(totalRows / localPageSize)
     : undefined
 
+  // Handle sorting change - for server-side, call external handler
+  const handleSortingChange = React.useCallback((updaterOrValue: SortingState | ((old: SortingState) => SortingState)) => {
+    const newSorting = typeof updaterOrValue === 'function'
+      ? updaterOrValue(sorting)
+      : updaterOrValue;
+    setSorting(newSorting);
+    if (serverSide && onSortingChangeExternal) {
+      onSortingChangeExternal(newSorting);
+    }
+  }, [sorting, serverSide, onSortingChangeExternal]);
+
   const table = useReactTable({
     data,
     columns,
-    onSortingChange: setSorting,
+    onSortingChange: handleSortingChange,
     onColumnFiltersChange: setColumnFilters,
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: serverSide ? undefined : getPaginationRowModel(),
-    getSortedRowModel: serverSide ? undefined : getSortedRowModel(),
+    getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: serverSide ? undefined : getFilteredRowModel(),
     onColumnVisibilityChange: setColumnVisibility,
     onRowSelectionChange: setRowSelection,
     manualPagination: serverSide,
     manualFiltering: serverSide,
+    manualSorting: serverSide && !!onSortingChangeExternal,
     pageCount: serverSide ? pageCount : undefined,
     state: {
       sorting,
@@ -379,8 +393,9 @@ export function DataTable<TData, TValue>({
               className="h-8 w-8"
               onClick={handleFirstPage}
               disabled={!canPreviousPage || isLoading}
+              aria-label="Ir a la primera pagina"
             >
-              <ChevronsLeft className="h-4 w-4" />
+              <ChevronsLeft className="h-4 w-4" aria-hidden="true" />
             </Button>
             <Button
               variant="outline"
@@ -388,11 +403,12 @@ export function DataTable<TData, TValue>({
               className="h-8 w-8"
               onClick={handlePreviousPage}
               disabled={!canPreviousPage || isLoading}
+              aria-label="Ir a la pagina anterior"
             >
-              <ChevronLeft className="h-4 w-4" />
+              <ChevronLeft className="h-4 w-4" aria-hidden="true" />
             </Button>
-            <span className="text-sm px-2">
-              {displayedPageIndex + 1} / {displayedPageCount}
+            <span className="text-sm px-2" aria-live="polite" aria-atomic="true">
+              Pagina {displayedPageIndex + 1} de {displayedPageCount}
             </span>
             <Button
               variant="outline"
@@ -400,8 +416,9 @@ export function DataTable<TData, TValue>({
               className="h-8 w-8"
               onClick={handleNextPage}
               disabled={!canNextPage || isLoading}
+              aria-label="Ir a la pagina siguiente"
             >
-              <ChevronRight className="h-4 w-4" />
+              <ChevronRight className="h-4 w-4" aria-hidden="true" />
             </Button>
             <Button
               variant="outline"
@@ -409,8 +426,9 @@ export function DataTable<TData, TValue>({
               className="h-8 w-8"
               onClick={handleLastPage}
               disabled={!canNextPage || isLoading}
+              aria-label="Ir a la ultima pagina"
             >
-              <ChevronsRight className="h-4 w-4" />
+              <ChevronsRight className="h-4 w-4" aria-hidden="true" />
             </Button>
           </div>
         </div>
@@ -434,21 +452,28 @@ export function DataTableColumnHeader<TData, TValue>({
     return <div className={className}>{title}</div>
   }
 
+  // Determinar el estado de ordenamiento para aria-sort
+  const sortDirection = column.getIsSorted();
+  const ariaSort: "ascending" | "descending" | "none" =
+    sortDirection === "asc" ? "ascending" :
+    sortDirection === "desc" ? "descending" : "none";
+
   return (
-    <div className={cn("flex", className)}>
+    <div className={cn("flex", className)} aria-sort={ariaSort}>
       <Button
         variant="ghost"
         size="sm"
         className="-ml-3 h-8 data-[state=open]:bg-accent"
         onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+        aria-label={`Ordenar por ${title}${sortDirection ? `, actualmente ${ariaSort === 'ascending' ? 'ascendente' : 'descendente'}` : ''}`}
       >
         {title}
         {column.getIsSorted() === "desc" ? (
-          <ChevronDown className="ml-2 h-4 w-4" />
+          <ChevronDown className="ml-2 h-4 w-4" aria-hidden="true" />
         ) : column.getIsSorted() === "asc" ? (
-          <ChevronDown className="ml-2 h-4 w-4 rotate-180" />
+          <ChevronDown className="ml-2 h-4 w-4 rotate-180" aria-hidden="true" />
         ) : (
-          <ChevronDown className="ml-2 h-4 w-4 opacity-30" />
+          <ChevronDown className="ml-2 h-4 w-4 opacity-30" aria-hidden="true" />
         )}
       </Button>
     </div>

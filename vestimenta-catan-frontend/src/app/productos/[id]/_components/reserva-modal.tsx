@@ -17,6 +17,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Loader2, ShoppingCart, CheckCircle } from 'lucide-react';
 import { useReservas } from '@/hooks/use-reservas';
 import { useAuth } from '@/hooks/use-auth';
+import { FormError } from '@/components/form';
+import { useLiveRegion } from '@/components/accessibility';
 
 interface ReservaModalProps {
   open: boolean;
@@ -42,6 +44,7 @@ export function ReservaModal({
   const router = useRouter();
   const { isAuthenticated } = useAuth();
   const { createReserva, isLoading, error, clearError } = useReservas();
+  const { announce } = useLiveRegion();
 
   const [cantidad, setCantidad] = useState(1);
   const [telefono, setTelefono] = useState('');
@@ -75,8 +78,11 @@ export function ReservaModal({
       });
       setSuccess(true);
       setReservaId(reserva.id);
+      // Anunciar exito a screen readers
+      announce(`Pedido numero ${reserva.id} realizado correctamente`);
     } catch {
       // Error ya manejado en el store
+      announce('Error al procesar el pedido', 'assertive');
     }
   };
 
@@ -102,8 +108,8 @@ export function ReservaModal({
       <Dialog open={open} onOpenChange={handleClose}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-green-100">
-              <CheckCircle className="h-10 w-10 text-green-600" />
+            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-success/10">
+              <CheckCircle className="h-10 w-10 text-success" />
             </div>
             <DialogTitle className="text-center">Pedido realizado</DialogTitle>
             <DialogDescription className="text-center">
@@ -157,8 +163,9 @@ export function ReservaModal({
                 size="icon"
                 onClick={() => setCantidad(Math.max(1, cantidad - 1))}
                 disabled={cantidad <= 1}
+                aria-label="Disminuir cantidad"
               >
-                -
+                <span aria-hidden="true">-</span>
               </Button>
               <Input
                 id="cantidad"
@@ -168,6 +175,7 @@ export function ReservaModal({
                 value={cantidad}
                 onChange={(e) => setCantidad(Math.min(stockDisponible, Math.max(1, parseInt(e.target.value) || 1)))}
                 className="w-20 text-center"
+                aria-describedby="cantidad-hint"
               />
               <Button
                 type="button"
@@ -175,10 +183,11 @@ export function ReservaModal({
                 size="icon"
                 onClick={() => setCantidad(Math.min(stockDisponible, cantidad + 1))}
                 disabled={cantidad >= stockDisponible}
+                aria-label="Aumentar cantidad"
               >
-                +
+                <span aria-hidden="true">+</span>
               </Button>
-              <span className="text-sm text-muted-foreground">
+              <span id="cantidad-hint" className="text-sm text-muted-foreground">
                 (max: {stockDisponible})
               </span>
             </div>
@@ -217,9 +226,7 @@ export function ReservaModal({
           </div>
 
           {/* Error */}
-          {error && (
-            <p className="text-sm text-destructive">{error}</p>
-          )}
+          <FormError id="reserva-error" message={error} />
         </div>
 
         <DialogFooter>

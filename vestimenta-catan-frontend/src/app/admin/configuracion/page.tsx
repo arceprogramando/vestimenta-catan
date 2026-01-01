@@ -222,7 +222,7 @@ export default function AdminConfiguracionPage() {
               </div>
               <div>
                 <p className="text-muted-foreground">Base de datos</p>
-                <Badge variant="outline" className="text-green-600">
+                <Badge variant="outline" className="text-success">
                   Conectada
                 </Badge>
               </div>

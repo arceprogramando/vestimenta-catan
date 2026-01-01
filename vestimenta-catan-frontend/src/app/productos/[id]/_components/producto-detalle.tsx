@@ -129,20 +129,23 @@ export function ProductoDetalle({ producto }: ProductoDetalleProps) {
 
           {/* Selector de Talle */}
           {talles.length > 0 && (
-            <div className="mb-6">
-              <h3 className="font-semibold mb-3">Talle</h3>
-              <div className="flex flex-wrap gap-2">
+            <div className="mb-6" role="group" aria-labelledby="talle-label">
+              <h3 id="talle-label" className="font-semibold mb-3">Talle</h3>
+              <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Seleccionar talle">
                 {talles.map((talle) => {
                   const tieneStock = producto.producto_variantes.some(
                     v => v.talle?.id === talle.id && v.cantidad > 0
                   );
+                  const isSelected = selectedTalle === talle.id;
                   return (
                     <Button
                       key={talle.id}
-                      variant={selectedTalle === talle.id ? 'default' : 'outline'}
+                      variant={isSelected ? 'default' : 'outline'}
                       onClick={() => setSelectedTalle(talle.id)}
                       disabled={!tieneStock}
                       className="min-w-15"
+                      aria-pressed={isSelected}
+                      aria-label={`Talle ${talle.nombre}${!tieneStock ? ', sin stock' : ''}`}
                     >
                       {talle.nombre}
                     </Button>
@@ -154,22 +157,25 @@ export function ProductoDetalle({ producto }: ProductoDetalleProps) {
 
           {/* Selector de Color */}
           {colores.length > 0 && (
-            <div className="mb-6">
-              <h3 className="font-semibold mb-3">Color</h3>
-              <div className="flex flex-wrap gap-2">
+            <div className="mb-6" role="group" aria-labelledby="color-label">
+              <h3 id="color-label" className="font-semibold mb-3">Color</h3>
+              <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Seleccionar color">
                 {colores.map((color) => {
                   const tieneStock = producto.producto_variantes.some(
                     v => v.color.id === color.id &&
                     (selectedTalle === null || v.talle?.id === selectedTalle) &&
                     v.cantidad > 0
                   );
+                  const isSelected = selectedColor === color.id;
                   return (
                     <Button
                       key={color.id}
-                      variant={selectedColor === color.id ? 'default' : 'outline'}
+                      variant={isSelected ? 'default' : 'outline'}
                       onClick={() => setSelectedColor(color.id)}
                       disabled={!tieneStock}
                       className="capitalize"
+                      aria-pressed={isSelected}
+                      aria-label={`Color ${color.nombre}${!tieneStock ? ', sin stock' : ''}`}
                     >
                       {color.nombre}
                     </Button>
@@ -185,7 +191,7 @@ export function ProductoDetalle({ producto }: ProductoDetalleProps) {
               <div className="flex items-center gap-2">
                 <Package className="h-5 w-5 text-muted-foreground" />
                 {selectedColor && (talles.length === 0 || selectedTalle) ? (
-                  <span className={stockDisponible > 0 ? 'text-green-600' : 'text-destructive'}>
+                  <span className={stockDisponible > 0 ? 'text-success' : 'text-destructive'}>
                     {stockDisponible > 0
                       ? `${stockDisponible} unidades disponibles`
                       : 'Sin stock para esta combinacion'
@@ -245,7 +251,7 @@ export function ProductoDetalle({ producto }: ProductoDetalleProps) {
                     )}
                     <td className="p-3 capitalize">{variante.color.nombre}</td>
                     <td className="p-3 text-right">
-                      <span className={variante.cantidad > 5 ? 'text-green-600' : 'text-orange-500'}>
+                      <span className={variante.cantidad > 5 ? 'text-success' : 'text-orange-600'}>
                         {variante.cantidad}
                       </span>
                     </td>

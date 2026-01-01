@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Loader2, Eye, EyeOff, Check } from 'lucide-react';
 import { useAuth, useRedirectIfAuthenticated } from '@/hooks/use-auth';
 import { GoogleLoginButton } from '@/app/(auth)/_components/google-login-button';
+import { FormError, FormFieldError } from '@/components/form';
 
 export default function RegistroPage() {
   const router = useRouter();
@@ -84,11 +85,7 @@ export default function RegistroPage() {
       </CardHeader>
       <form onSubmit={handleSubmit}>
         <CardContent className="space-y-4">
-          {displayError && (
-            <div className="p-3 text-sm text-destructive bg-destructive/10 rounded-md">
-              {displayError}
-            </div>
-          )}
+          <FormError id="registro-error" message={displayError} />
 
           <GoogleLoginButton onError={(err) => { clearError(); setLocalError(null); setGoogleError(err); }} />
 
@@ -155,6 +152,8 @@ export default function RegistroPage() {
                 onChange={handleChange}
                 required
                 disabled={isLoading}
+                aria-describedby="password-requirements"
+                aria-invalid={formData.password.length > 0 && !passwordRequirements.every(r => r.met)}
               />
               <Button
                 type="button"
@@ -162,27 +161,34 @@ export default function RegistroPage() {
                 size="icon"
                 className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
                 onClick={() => setShowPassword(!showPassword)}
+                aria-label={showPassword ? 'Ocultar contrasena' : 'Mostrar contrasena'}
+                aria-pressed={showPassword}
               >
                 {showPassword ? (
-                  <EyeOff className="h-4 w-4 text-muted-foreground" />
+                  <EyeOff className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
                 ) : (
-                  <Eye className="h-4 w-4 text-muted-foreground" />
+                  <Eye className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
                 )}
               </Button>
             </div>
 
-            {/* Password requirements */}
-            <div className="grid grid-cols-2 gap-2 text-xs mt-2">
+            {/* Password requirements - accesible */}
+            <ul
+              id="password-requirements"
+              className="grid grid-cols-2 gap-2 text-xs mt-2"
+              aria-label="Requisitos de contrasena"
+            >
               {passwordRequirements.map((req, i) => (
-                <div
+                <li
                   key={i}
-                  className={`flex items-center gap-1 ${req.met ? 'text-green-600' : 'text-muted-foreground'}`}
+                  className={`flex items-center gap-1 ${req.met ? 'text-success' : 'text-muted-foreground'}`}
+                  aria-label={`${req.label}: ${req.met ? 'cumplido' : 'pendiente'}`}
                 >
-                  <Check className={`h-3 w-3 ${req.met ? 'opacity-100' : 'opacity-30'}`} />
-                  {req.label}
-                </div>
+                  <Check className={`h-3 w-3 ${req.met ? 'opacity-100' : 'opacity-30'}`} aria-hidden="true" />
+                  <span>{req.label}</span>
+                </li>
               ))}
-            </div>
+            </ul>
           </div>
 
           <div className="space-y-2">
@@ -196,9 +202,11 @@ export default function RegistroPage() {
               onChange={handleChange}
               required
               disabled={isLoading}
+              aria-describedby={formData.confirmPassword && formData.password !== formData.confirmPassword ? 'confirm-password-error' : undefined}
+              aria-invalid={!!(formData.confirmPassword && formData.password !== formData.confirmPassword)}
             />
             {formData.confirmPassword && formData.password !== formData.confirmPassword && (
-              <p className="text-xs text-destructive">Las contrasenas no coinciden</p>
+              <FormFieldError id="confirm-password-error" message="Las contrasenas no coinciden" />
             )}
           </div>
         </CardContent>
@@ -210,7 +218,7 @@ export default function RegistroPage() {
           </Button>
           <p className="text-sm text-muted-foreground text-center">
             Ya tienes cuenta?{' '}
-            <Link href="/login" className="text-primary hover:underline">
+            <Link href="/login" className="text-primary underline underline-offset-4 hover:text-primary/80">
               Inicia sesion
             </Link>
           </p>

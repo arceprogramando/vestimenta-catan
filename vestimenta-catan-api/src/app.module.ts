@@ -1,5 +1,5 @@
 import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { WinstonModule } from 'nest-winston';
@@ -30,14 +30,16 @@ import { UsuariosModule } from './usuarios/usuarios.module';
     }),
     // Winston Logger
     WinstonModule.forRoot(winstonConfig),
-    // Rate limiting global: configuración desde .env
-    // En tests usamos límites muy altos para evitar bloqueos
-    ThrottlerModule.forRoot([
-      {
-        ttl: parseInt(process.env.RATE_LIMIT_TTL || '60000', 10),
-        limit: parseInt(process.env.RATE_LIMIT_LIMIT || '100', 10),
-      },
-    ]),
+    // Rate limiting global: configuración desde ConfigService
+    ThrottlerModule.forRootAsync({
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => [
+        {
+          ttl: configService.get<number>('RATE_LIMIT_TTL', 60000),
+          limit: configService.get<number>('RATE_LIMIT_LIMIT', 100),
+        },
+      ],
+    }),
     PrismaModule,
     HealthModule,
     AuditModule,

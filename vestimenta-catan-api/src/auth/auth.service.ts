@@ -2,6 +2,7 @@ import {
   Injectable,
   UnauthorizedException,
   ConflictException,
+  InternalServerErrorException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
@@ -377,7 +378,7 @@ export class AuthService {
     const refreshSecret = this.configService.get<string>('JWT_REFRESH_SECRET');
 
     if (!accessSecret || !refreshSecret) {
-      throw new Error(
+      throw new InternalServerErrorException(
         'JWT secrets no configurados. Verifique JWT_ACCESS_SECRET y JWT_REFRESH_SECRET.',
       );
     }
@@ -406,7 +407,9 @@ export class AuthService {
       // Agregar contexto al error para facilitar debugging
       const errorMessage =
         error instanceof Error ? error.message : 'Error desconocido';
-      throw new Error(`Error generando tokens JWT: ${errorMessage}`);
+      throw new InternalServerErrorException(
+        `Error generando tokens JWT: ${errorMessage}`,
+      );
     }
   }
 

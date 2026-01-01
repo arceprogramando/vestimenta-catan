@@ -75,6 +75,29 @@ export class EnvironmentVariables {
   })
   @IsOptional()
   LOG_LEVEL?: string;
+
+  // === Rate Limiting ===
+
+  @IsNumber({}, { message: 'RATE_LIMIT_TTL debe ser un número (ms)' })
+  @IsOptional()
+  RATE_LIMIT_TTL: number = 60000;
+
+  @IsNumber({}, { message: 'RATE_LIMIT_LIMIT debe ser un número' })
+  @IsOptional()
+  RATE_LIMIT_LIMIT: number = 100;
+
+  // === Audit ===
+
+  @IsString({ message: 'AUDIT_ENABLED debe ser un string (true/false)' })
+  @IsIn(['true', 'false'], {
+    message: 'AUDIT_ENABLED debe ser: true o false',
+  })
+  @IsOptional()
+  AUDIT_ENABLED: string = 'true';
+
+  @IsNumber({}, { message: 'AUDIT_RETENTION_DAYS debe ser un número' })
+  @IsOptional()
+  AUDIT_RETENTION_DAYS: number = 90;
 }
 
 /**

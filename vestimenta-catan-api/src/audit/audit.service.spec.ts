@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { ConfigService } from '@nestjs/config';
 import { AuditService } from './audit.service';
 import { AuditableTable } from './audit.types';
 
@@ -22,17 +23,37 @@ jest.mock('@prisma/adapter-pg', () => ({
   PrismaPg: jest.fn().mockImplementation(() => ({})),
 }));
 
+// Mock ConfigService
+const mockConfigService = {
+  get: jest.fn((key: string, defaultValue?: unknown) => {
+    const config: Record<string, unknown> = {
+      AUDIT_ENABLED: 'true',
+      AUDIT_RETENTION_DAYS: 90,
+      DATABASE_URL: 'postgresql://test:test@localhost:5432/test',
+    };
+    return config[key] ?? defaultValue;
+  }),
+  getOrThrow: jest.fn((key: string) => {
+    const config: Record<string, string> = {
+      DATABASE_URL: 'postgresql://test:test@localhost:5432/test',
+    };
+    if (!config[key]) throw new Error(`Missing config: ${key}`);
+    return config[key];
+  }),
+};
+
 describe('AuditService', () => {
   let service: AuditService;
 
   beforeEach(async () => {
-    // Reset environment
-    process.env.AUDIT_ENABLED = 'true';
-    process.env.AUDIT_RETENTION_DAYS = '90';
-    process.env.DATABASE_URL = 'postgresql://test:test@localhost:5432/test';
-
     const module: TestingModule = await Test.createTestingModule({
-      providers: [AuditService],
+      providers: [
+        AuditService,
+        {
+          provide: ConfigService,
+          useValue: mockConfigService,
+        },
+      ],
     }).compile();
 
     service = module.get<AuditService>(AuditService);

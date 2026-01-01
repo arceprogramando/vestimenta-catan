@@ -1,4 +1,5 @@
 import { Injectable, OnModuleDestroy, Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { Prisma, PrismaClient } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
@@ -26,16 +27,25 @@ export class AuditService implements OnModuleDestroy {
   // Cliente Prisma separado para audit_log (evita recursión)
   private auditPrisma: PrismaClient;
 
-  constructor() {
+  constructor(private readonly configService: ConfigService) {
+    const auditEnabled = this.configService.get<string>(
+      'AUDIT_ENABLED',
+      'true',
+    );
+    const retentionDays = this.configService.get<number>(
+      'AUDIT_RETENTION_DAYS',
+      90,
+    );
+    const databaseUrl = this.configService.getOrThrow<string>('DATABASE_URL');
+
     this.config = {
       ...DEFAULT_AUDIT_CONFIG,
-      enabled: process.env.AUDIT_ENABLED !== 'false',
-      retentionDays: parseInt(process.env.AUDIT_RETENTION_DAYS || '90', 10),
+      enabled: auditEnabled !== 'false',
+      retentionDays,
     };
 
     // Crear cliente Prisma dedicado para auditoría
-    const connectionString = process.env.DATABASE_URL || '';
-    const adapter = new PrismaPg({ connectionString });
+    const adapter = new PrismaPg({ connectionString: databaseUrl });
     this.auditPrisma = new PrismaClient({ adapter });
 
     // Iniciar timer de flush

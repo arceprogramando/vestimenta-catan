@@ -23,7 +23,13 @@
       "Bash(git -C /d/dev/vestimenta-catan diff vestimenta-catan-api/package.json)",
       "Bash(pnpm run test:*)",
       "Bash(git -C /d/dev/vestimenta-catan status)",
-      "Bash(git -C /d/dev/vestimenta-catan log -5 --oneline)"
+      "Bash(git -C /d/dev/vestimenta-catan log -5 --oneline)",
+      "Bash(dir /s /b \"d:\\\\dev\\\\vestimenta-catan\\\\vestimenta-catan-frontend\\\\hooks\")",
+      "Bash(dir:*)",
+      "Bash(pnpm run start:dev:*)",
+      "Bash(pnpm run dev:*)",
+      "Bash(curl:*)",
+      "Bash(git show:*)"
     ]
   }
 }

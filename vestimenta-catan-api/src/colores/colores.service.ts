@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  BadRequestException,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateColorDto } from './dto/create-color.dto';
 import { UpdateColorDto } from './dto/update-color.dto';
@@ -118,7 +122,7 @@ export class ColoresService {
     }
 
     if (color.is_active) {
-      throw new Error('El color no está eliminado');
+      throw new BadRequestException('El color no está eliminado');
     }
 
     const restored = await this.prisma.colores.update({

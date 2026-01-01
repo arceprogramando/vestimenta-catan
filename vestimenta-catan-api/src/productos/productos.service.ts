@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  BadRequestException,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { Prisma, genero } from '@prisma/client';
 import { CreateProductoDto } from './dto/create-producto.dto';
@@ -250,11 +254,11 @@ export class ProductosService {
     });
 
     if (!producto) {
-      throw new Error('Producto no encontrado');
+      throw new NotFoundException('Producto no encontrado');
     }
 
     if (producto.is_active) {
-      throw new Error('El producto no está eliminado');
+      throw new BadRequestException('El producto no está eliminado');
     }
 
     return this.prisma.productos.update({

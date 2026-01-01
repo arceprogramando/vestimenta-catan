@@ -1,4 +1,5 @@
 import { Controller, Get } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import {
   HealthCheck,
@@ -22,11 +23,19 @@ import { PrismaHealthIndicator } from './prisma.health';
 @ApiTags('Health')
 @Controller('health')
 export class HealthController {
+  private readonly environment: string;
+
   constructor(
     private health: HealthCheckService,
     private prismaHealth: PrismaHealthIndicator,
     private memoryHealth: MemoryHealthIndicator,
-  ) {}
+    private configService: ConfigService,
+  ) {
+    this.environment = this.configService.get<string>(
+      'NODE_ENV',
+      'development',
+    );
+  }
 
   /**
    * Liveness Probe - ¿El proceso está vivo?
@@ -133,8 +142,8 @@ export class HealthController {
       status: 'ok',
       timestamp: new Date().toISOString(),
       uptime: process.uptime(),
-      version: process.env.npm_package_version || '1.0.0',
-      environment: process.env.NODE_ENV || 'development',
+      version: '1.0.0',
+      environment: this.environment,
       node: process.version,
     };
   }

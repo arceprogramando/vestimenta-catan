@@ -9,6 +9,7 @@ import {
   Res,
   UseGuards,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { AuthGuard } from '@nestjs/passport';
 import {
   ApiBearerAuth,
@@ -36,7 +37,15 @@ import {
 @ApiTags('Autenticación')
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  private readonly isProduction: boolean;
+
+  constructor(
+    private readonly authService: AuthService,
+    private readonly configService: ConfigService,
+  ) {
+    this.isProduction =
+      this.configService.get<string>('NODE_ENV') === 'production';
+  }
 
   @Public()
   @Post('register')
@@ -250,13 +259,11 @@ export class AuthController {
     accessToken: string,
     refreshToken: string,
   ) {
-    const isProduction = process.env.NODE_ENV === 'production';
-
     // Access token cookie - expira en 15 minutos
     res.cookie('accessToken', accessToken, {
       httpOnly: true,
-      secure: isProduction,
-      sameSite: isProduction ? 'strict' : 'lax',
+      secure: this.isProduction,
+      sameSite: this.isProduction ? 'strict' : 'lax',
       maxAge: 15 * 60 * 1000, // 15 minutos
       path: '/',
     });
@@ -264,8 +271,8 @@ export class AuthController {
     // Refresh token cookie - expira en 7 días
     res.cookie('refreshToken', refreshToken, {
       httpOnly: true,
-      secure: isProduction,
-      sameSite: isProduction ? 'strict' : 'lax',
+      secure: this.isProduction,
+      sameSite: this.isProduction ? 'strict' : 'lax',
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 días
       path: '/api/auth',
     });
@@ -275,19 +282,17 @@ export class AuthController {
    * Limpiar todas las cookies de autenticación
    */
   private clearAuthCookies(res: Response) {
-    const isProduction = process.env.NODE_ENV === 'production';
-
     res.clearCookie('accessToken', {
       httpOnly: true,
-      secure: isProduction,
-      sameSite: isProduction ? 'strict' : 'lax',
+      secure: this.isProduction,
+      sameSite: this.isProduction ? 'strict' : 'lax',
       path: '/',
     });
 
     res.clearCookie('refreshToken', {
       httpOnly: true,
-      secure: isProduction,
-      sameSite: isProduction ? 'strict' : 'lax',
+      secure: this.isProduction,
+      sameSite: this.isProduction ? 'strict' : 'lax',
       path: '/api/auth',
     });
   }
